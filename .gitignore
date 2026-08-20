@@ -1,0 +1,60 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Xcode build output. Flutter's ios/.gitignore only covers the default
+# ~/Library/Developer/Xcode/DerivedData location; a project-relative build
+# location (Xcode preference, or --derived-data-path) lands here instead.
+/ios/Build/
+
+# Per-environment configuration. Copy the .example files and fill them in —
+# the values are publishable, but they name real projects, so they stay local.
+/env/*.json
+!/env/*.example.json
+
+# Android signing
+/android/key.properties
+*.jks
+*.keystore
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

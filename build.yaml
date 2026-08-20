@@ -1,0 +1,13 @@
+# Drift stores date-times as unix *seconds* unless told otherwise, which
+# silently truncates anything written and read back in the same breath, and
+# throws away the timezone. Text storage (ISO-8601, UTC) round-trips exactly and
+# still sorts chronologically in SQL.
+#
+# Safe to choose here because the schema is at version 1 and has never shipped:
+# switching representations later would need a migration.
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          store_date_time_values_as_text: true

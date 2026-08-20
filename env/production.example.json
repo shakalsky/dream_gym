@@ -1,0 +1,10 @@
+{
+  "FLAVOR": "production",
+  "APP_NAME": "Dream Gym",
+  "API_BASE_URL": "https://api.dream-gym.app",
+  "SUPABASE_URL": "https://xxxxxxxxxxxxxxxx.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_xxxxxxxxxxxxxxxxxxxxxxxx",
+  "POWERSYNC_URL": "https://xxxxxxxxxxxxxxxxxxxxxxxx.powersync.journeyapps.com",
+  "DATABASE_NAME": "dream_gym.db",
+  "VERBOSE_LOGGING": "false"
+}
