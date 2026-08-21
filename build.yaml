@@ -1,10 +1,15 @@
 # Drift stores date-times as unix *seconds* unless told otherwise, which
 # silently truncates anything written and read back in the same breath, and
-# throws away the timezone. Text storage (ISO-8601, UTC) round-trips exactly and
-# still sorts chronologically in SQL.
+# throws away the timezone. Text storage round-trips exactly — ISO-8601 with the
+# UTC offset kept, `Z` for values that were already UTC — and still sorts
+# chronologically in SQL, since the date prefix dominates the comparison.
 #
-# Safe to choose here because the schema is at version 1 and has never shipped:
-# switching representations later would need a migration.
+# Changing this option is not a schema change drift can see: `schemaVersion`
+# stays where it is, no migration runs, and a database written under the other
+# representation keeps its integers. Every date read from it then fails —
+# drift's text reader parses `1787256434` as `1787256434Z`. So a database from
+# before this option took effect has to be deleted, not upgraded. Acceptable
+# here only because the app has never shipped.
 targets:
   $default:
     builders:

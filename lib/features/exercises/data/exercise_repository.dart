@@ -43,7 +43,10 @@ class ExerciseRepository {
       id: newUuid(),
       name: name.trim(),
       photoFileName: photoFileName,
-      createdAt: _now(),
+      // Not rounded to whole seconds. A date-time column holds ISO-8601 text
+      // (see `build.yaml`), which round-trips microseconds exactly, so the
+      // exercise returned here equals the row that was written.
+      createdAt: DateTime.now(),
     );
 
     await _database
@@ -103,20 +106,6 @@ class ExerciseRepository {
     // exercise pointing at a photo that is no longer there.
     final photoFileName = row.photoFileName;
     if (photoFileName != null) await _photos.delete(photoFileName);
-  }
-
-  /// Now, at the precision the database keeps.
-  ///
-  /// A date-time column is stored as whole unix seconds, so a `DateTime.now()`
-  /// written into one does not come back out of a query. Rounding down here is
-  /// what makes the exercise returned by [create] equal to the row that was
-  /// written, rather than one that differs by a fraction of a second.
-  DateTime _now() {
-    final now = DateTime.now();
-
-    return DateTime.fromMillisecondsSinceEpoch(
-      (now.millisecondsSinceEpoch ~/ 1000) * 1000,
-    );
   }
 
   Exercise _toExercise(ExerciseRow row) => Exercise(

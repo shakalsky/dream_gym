@@ -12,7 +12,7 @@ part 'app_database.g.dart';
 /// is what comes next — a PowerSync database is a [SqliteConnection] too, so
 /// turning this local-only app into a syncing one is a change to how the
 /// connection is opened, not a rewrite of every query.
-@DriftDatabase(tables: [Exercises, TrainingEntries])
+@DriftDatabase(tables: [Exercises, TrainingEntries, SettingsEntries])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(SqliteConnection connection)
     : super(SqliteAsyncDriftConnection(connection));
@@ -23,5 +23,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      // 2 adds the settings row. Nothing is backfilled: every column has a
+      // default and the repository treats 'no row' as 'the defaults'.
+      if (from < 2) await m.createTable(settingsEntries);
+    },
+  );
 }

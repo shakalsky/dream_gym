@@ -57,3 +57,37 @@ class TrainingEntries extends Table {
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
+
+/// The reader's preferences — one row, always id 0.
+///
+/// A table rather than `shared_preferences`: drift is already open, the app has
+/// no prefs dependency, and a row is something PowerSync can carry to the
+/// reader's other devices later. Every column has a default, so a missing row
+/// and a fresh install read the same way.
+@DataClassName('SettingsRow')
+class SettingsEntries extends Table {
+  /// Always 0. The table holds one row; the column exists to give it a key.
+  IntColumn get id => integer().withDefault(const Constant(0))();
+
+  /// `WeightUnit.name`. Stored as its name rather than its index so that
+  /// reordering the enum cannot silently turn kilograms into pounds.
+  TextColumn get weightUnit =>
+      text().withDefault(const Constant('kilograms'))();
+
+  /// `ThemeChoice.name`.
+  TextColumn get themeChoice => text().withDefault(const Constant('system'))();
+
+  BoolColumn get trainingReminder =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Minutes since local midnight — 1110 is 18:30.
+  ///
+  /// A `TimeOfDay` has no date to attach to, and a `DateTimeColumn` would
+  /// invent one that daylight saving then moves.
+  IntColumn get reminderMinutes => integer().withDefault(const Constant(1110))();
+
+  BoolColumn get weeklySummary => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}

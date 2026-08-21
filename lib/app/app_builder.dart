@@ -3,6 +3,7 @@ import 'package:dream_gym/core/database/open_database.dart';
 import 'package:dream_gym/core/storage/photo_store.dart';
 import 'package:dream_gym/env/app_env.dart';
 import 'package:dream_gym/features/exercises/data/exercise_repository.dart';
+import 'package:dream_gym/features/settings/data/settings_repository.dart';
 import 'package:dream_gym/features/training/data/training_repository.dart';
 import 'package:flutter/widgets.dart';
 
@@ -19,5 +20,6 @@ Future<Widget> buildApp(AppEnv env) async {
     exercises: ExerciseRepository(database: database, photos: photos),
     training: TrainingRepository(database: database),
     photos: photos,
+    settings: SettingsRepository(database: database),
   );
 }

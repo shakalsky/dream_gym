@@ -1,6 +1,7 @@
 import 'package:dream_gym/app/view/environment_page.dart';
 import 'package:dream_gym/env/app_env.dart';
 import 'package:dream_gym/features/exercises/view/exercises_page.dart';
+import 'package:dream_gym/features/settings/view/settings_page.dart';
 import 'package:dream_gym/features/statistics/view/statistics_page.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
 
@@ -30,12 +31,21 @@ class _HomePageState extends State<HomePage> {
         icon: Icons.insights_outlined,
         page: StatisticsPage(),
       ),
+      _HomeTab(
+        label: 'Settings',
+        icon: Icons.settings_outlined,
+        page: SettingsPage(env: widget.env),
+      ),
       // A development build keeps the environment readable on the device; a
       // release has no business showing it.
+      //
+      // The icon is a terminal rather than a cog: `settings_outlined` now
+      // belongs to Settings, and two tabs sharing one icon is a bug report
+      // waiting to happen.
       if (widget.env.flavor.isDevelopment)
         _HomeTab(
           label: 'Env',
-          icon: Icons.settings_outlined,
+          icon: Icons.terminal_outlined,
           page: EnvironmentPage(env: widget.env),
         ),
     ];

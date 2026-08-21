@@ -8,6 +8,7 @@ import 'package:dream_gym/env/app_env.dart';
 import 'package:dream_gym/env/flavor.dart';
 import 'package:dream_gym/features/exercises/data/exercise_repository.dart';
 import 'package:dream_gym/features/exercises/view/exercises_page.dart';
+import 'package:dream_gym/features/settings/data/settings_repository.dart';
 import 'package:dream_gym/features/training/data/training_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +34,7 @@ void main() {
     exercises: ExerciseRepository(database: database, photos: photos),
     training: TrainingRepository(database: database),
     photos: photos,
+    settings: SettingsRepository(database: database),
   );
 
   group('App', () {

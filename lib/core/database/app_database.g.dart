@@ -768,11 +768,447 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
   }
 }
 
+class $SettingsEntriesTable extends SettingsEntries
+    with TableInfo<$SettingsEntriesTable, SettingsRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettingsEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _weightUnitMeta = const VerificationMeta(
+    'weightUnit',
+  );
+  @override
+  late final GeneratedColumn<String> weightUnit = GeneratedColumn<String>(
+    'weight_unit',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('kilograms'),
+  );
+  static const VerificationMeta _themeChoiceMeta = const VerificationMeta(
+    'themeChoice',
+  );
+  @override
+  late final GeneratedColumn<String> themeChoice = GeneratedColumn<String>(
+    'theme_choice',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('system'),
+  );
+  static const VerificationMeta _trainingReminderMeta = const VerificationMeta(
+    'trainingReminder',
+  );
+  @override
+  late final GeneratedColumn<bool> trainingReminder = GeneratedColumn<bool>(
+    'training_reminder',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("training_reminder" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _reminderMinutesMeta = const VerificationMeta(
+    'reminderMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> reminderMinutes = GeneratedColumn<int>(
+    'reminder_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1110),
+  );
+  static const VerificationMeta _weeklySummaryMeta = const VerificationMeta(
+    'weeklySummary',
+  );
+  @override
+  late final GeneratedColumn<bool> weeklySummary = GeneratedColumn<bool>(
+    'weekly_summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("weekly_summary" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    weightUnit,
+    themeChoice,
+    trainingReminder,
+    reminderMinutes,
+    weeklySummary,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'settings_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SettingsRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('weight_unit')) {
+      context.handle(
+        _weightUnitMeta,
+        weightUnit.isAcceptableOrUnknown(data['weight_unit']!, _weightUnitMeta),
+      );
+    }
+    if (data.containsKey('theme_choice')) {
+      context.handle(
+        _themeChoiceMeta,
+        themeChoice.isAcceptableOrUnknown(
+          data['theme_choice']!,
+          _themeChoiceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('training_reminder')) {
+      context.handle(
+        _trainingReminderMeta,
+        trainingReminder.isAcceptableOrUnknown(
+          data['training_reminder']!,
+          _trainingReminderMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minutes')) {
+      context.handle(
+        _reminderMinutesMeta,
+        reminderMinutes.isAcceptableOrUnknown(
+          data['reminder_minutes']!,
+          _reminderMinutesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('weekly_summary')) {
+      context.handle(
+        _weeklySummaryMeta,
+        weeklySummary.isAcceptableOrUnknown(
+          data['weekly_summary']!,
+          _weeklySummaryMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SettingsRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SettingsRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      weightUnit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}weight_unit'],
+      )!,
+      themeChoice: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}theme_choice'],
+      )!,
+      trainingReminder: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}training_reminder'],
+      )!,
+      reminderMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minutes'],
+      )!,
+      weeklySummary: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}weekly_summary'],
+      )!,
+    );
+  }
+
+  @override
+  $SettingsEntriesTable createAlias(String alias) {
+    return $SettingsEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class SettingsRow extends DataClass implements Insertable<SettingsRow> {
+  /// Always 0. The table holds one row; the column exists to give it a key.
+  final int id;
+
+  /// `WeightUnit.name`. Stored as its name rather than its index so that
+  /// reordering the enum cannot silently turn kilograms into pounds.
+  final String weightUnit;
+
+  /// `ThemeChoice.name`.
+  final String themeChoice;
+  final bool trainingReminder;
+
+  /// Minutes since local midnight — 1110 is 18:30.
+  ///
+  /// A `TimeOfDay` has no date to attach to, and a `DateTimeColumn` would
+  /// invent one that daylight saving then moves.
+  final int reminderMinutes;
+  final bool weeklySummary;
+  const SettingsRow({
+    required this.id,
+    required this.weightUnit,
+    required this.themeChoice,
+    required this.trainingReminder,
+    required this.reminderMinutes,
+    required this.weeklySummary,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['weight_unit'] = Variable<String>(weightUnit);
+    map['theme_choice'] = Variable<String>(themeChoice);
+    map['training_reminder'] = Variable<bool>(trainingReminder);
+    map['reminder_minutes'] = Variable<int>(reminderMinutes);
+    map['weekly_summary'] = Variable<bool>(weeklySummary);
+    return map;
+  }
+
+  SettingsEntriesCompanion toCompanion(bool nullToAbsent) {
+    return SettingsEntriesCompanion(
+      id: Value(id),
+      weightUnit: Value(weightUnit),
+      themeChoice: Value(themeChoice),
+      trainingReminder: Value(trainingReminder),
+      reminderMinutes: Value(reminderMinutes),
+      weeklySummary: Value(weeklySummary),
+    );
+  }
+
+  factory SettingsRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SettingsRow(
+      id: serializer.fromJson<int>(json['id']),
+      weightUnit: serializer.fromJson<String>(json['weightUnit']),
+      themeChoice: serializer.fromJson<String>(json['themeChoice']),
+      trainingReminder: serializer.fromJson<bool>(json['trainingReminder']),
+      reminderMinutes: serializer.fromJson<int>(json['reminderMinutes']),
+      weeklySummary: serializer.fromJson<bool>(json['weeklySummary']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'weightUnit': serializer.toJson<String>(weightUnit),
+      'themeChoice': serializer.toJson<String>(themeChoice),
+      'trainingReminder': serializer.toJson<bool>(trainingReminder),
+      'reminderMinutes': serializer.toJson<int>(reminderMinutes),
+      'weeklySummary': serializer.toJson<bool>(weeklySummary),
+    };
+  }
+
+  SettingsRow copyWith({
+    int? id,
+    String? weightUnit,
+    String? themeChoice,
+    bool? trainingReminder,
+    int? reminderMinutes,
+    bool? weeklySummary,
+  }) => SettingsRow(
+    id: id ?? this.id,
+    weightUnit: weightUnit ?? this.weightUnit,
+    themeChoice: themeChoice ?? this.themeChoice,
+    trainingReminder: trainingReminder ?? this.trainingReminder,
+    reminderMinutes: reminderMinutes ?? this.reminderMinutes,
+    weeklySummary: weeklySummary ?? this.weeklySummary,
+  );
+  SettingsRow copyWithCompanion(SettingsEntriesCompanion data) {
+    return SettingsRow(
+      id: data.id.present ? data.id.value : this.id,
+      weightUnit: data.weightUnit.present
+          ? data.weightUnit.value
+          : this.weightUnit,
+      themeChoice: data.themeChoice.present
+          ? data.themeChoice.value
+          : this.themeChoice,
+      trainingReminder: data.trainingReminder.present
+          ? data.trainingReminder.value
+          : this.trainingReminder,
+      reminderMinutes: data.reminderMinutes.present
+          ? data.reminderMinutes.value
+          : this.reminderMinutes,
+      weeklySummary: data.weeklySummary.present
+          ? data.weeklySummary.value
+          : this.weeklySummary,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsRow(')
+          ..write('id: $id, ')
+          ..write('weightUnit: $weightUnit, ')
+          ..write('themeChoice: $themeChoice, ')
+          ..write('trainingReminder: $trainingReminder, ')
+          ..write('reminderMinutes: $reminderMinutes, ')
+          ..write('weeklySummary: $weeklySummary')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    weightUnit,
+    themeChoice,
+    trainingReminder,
+    reminderMinutes,
+    weeklySummary,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SettingsRow &&
+          other.id == this.id &&
+          other.weightUnit == this.weightUnit &&
+          other.themeChoice == this.themeChoice &&
+          other.trainingReminder == this.trainingReminder &&
+          other.reminderMinutes == this.reminderMinutes &&
+          other.weeklySummary == this.weeklySummary);
+}
+
+class SettingsEntriesCompanion extends UpdateCompanion<SettingsRow> {
+  final Value<int> id;
+  final Value<String> weightUnit;
+  final Value<String> themeChoice;
+  final Value<bool> trainingReminder;
+  final Value<int> reminderMinutes;
+  final Value<bool> weeklySummary;
+  const SettingsEntriesCompanion({
+    this.id = const Value.absent(),
+    this.weightUnit = const Value.absent(),
+    this.themeChoice = const Value.absent(),
+    this.trainingReminder = const Value.absent(),
+    this.reminderMinutes = const Value.absent(),
+    this.weeklySummary = const Value.absent(),
+  });
+  SettingsEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    this.weightUnit = const Value.absent(),
+    this.themeChoice = const Value.absent(),
+    this.trainingReminder = const Value.absent(),
+    this.reminderMinutes = const Value.absent(),
+    this.weeklySummary = const Value.absent(),
+  });
+  static Insertable<SettingsRow> custom({
+    Expression<int>? id,
+    Expression<String>? weightUnit,
+    Expression<String>? themeChoice,
+    Expression<bool>? trainingReminder,
+    Expression<int>? reminderMinutes,
+    Expression<bool>? weeklySummary,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (weightUnit != null) 'weight_unit': weightUnit,
+      if (themeChoice != null) 'theme_choice': themeChoice,
+      if (trainingReminder != null) 'training_reminder': trainingReminder,
+      if (reminderMinutes != null) 'reminder_minutes': reminderMinutes,
+      if (weeklySummary != null) 'weekly_summary': weeklySummary,
+    });
+  }
+
+  SettingsEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? weightUnit,
+    Value<String>? themeChoice,
+    Value<bool>? trainingReminder,
+    Value<int>? reminderMinutes,
+    Value<bool>? weeklySummary,
+  }) {
+    return SettingsEntriesCompanion(
+      id: id ?? this.id,
+      weightUnit: weightUnit ?? this.weightUnit,
+      themeChoice: themeChoice ?? this.themeChoice,
+      trainingReminder: trainingReminder ?? this.trainingReminder,
+      reminderMinutes: reminderMinutes ?? this.reminderMinutes,
+      weeklySummary: weeklySummary ?? this.weeklySummary,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (weightUnit.present) {
+      map['weight_unit'] = Variable<String>(weightUnit.value);
+    }
+    if (themeChoice.present) {
+      map['theme_choice'] = Variable<String>(themeChoice.value);
+    }
+    if (trainingReminder.present) {
+      map['training_reminder'] = Variable<bool>(trainingReminder.value);
+    }
+    if (reminderMinutes.present) {
+      map['reminder_minutes'] = Variable<int>(reminderMinutes.value);
+    }
+    if (weeklySummary.present) {
+      map['weekly_summary'] = Variable<bool>(weeklySummary.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('weightUnit: $weightUnit, ')
+          ..write('themeChoice: $themeChoice, ')
+          ..write('trainingReminder: $trainingReminder, ')
+          ..write('reminderMinutes: $reminderMinutes, ')
+          ..write('weeklySummary: $weeklySummary')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ExercisesTable exercises = $ExercisesTable(this);
   late final $TrainingEntriesTable trainingEntries = $TrainingEntriesTable(
+    this,
+  );
+  late final $SettingsEntriesTable settingsEntries = $SettingsEntriesTable(
     this,
   );
   late final Index trainingEntriesByExercise = Index(
@@ -786,8 +1222,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     exercises,
     trainingEntries,
+    settingsEntries,
     trainingEntriesByExercise,
   ];
+  @override
+  DriftDatabaseOptions get options =>
+      const DriftDatabaseOptions(storeDateTimeAsText: true);
 }
 
 typedef $$ExercisesTableCreateCompanionBuilder =
@@ -1425,6 +1865,231 @@ typedef $$TrainingEntriesTableProcessedTableManager =
       TrainingEntryRow,
       PrefetchHooks Function({bool exerciseId})
     >;
+typedef $$SettingsEntriesTableCreateCompanionBuilder =
+    SettingsEntriesCompanion Function({
+      Value<int> id,
+      Value<String> weightUnit,
+      Value<String> themeChoice,
+      Value<bool> trainingReminder,
+      Value<int> reminderMinutes,
+      Value<bool> weeklySummary,
+    });
+typedef $$SettingsEntriesTableUpdateCompanionBuilder =
+    SettingsEntriesCompanion Function({
+      Value<int> id,
+      Value<String> weightUnit,
+      Value<String> themeChoice,
+      Value<bool> trainingReminder,
+      Value<int> reminderMinutes,
+      Value<bool> weeklySummary,
+    });
+
+class $$SettingsEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingsEntriesTable> {
+  $$SettingsEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get weightUnit => $composableBuilder(
+    column: $table.weightUnit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get themeChoice => $composableBuilder(
+    column: $table.themeChoice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get trainingReminder => $composableBuilder(
+    column: $table.trainingReminder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinutes => $composableBuilder(
+    column: $table.reminderMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get weeklySummary => $composableBuilder(
+    column: $table.weeklySummary,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SettingsEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingsEntriesTable> {
+  $$SettingsEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get weightUnit => $composableBuilder(
+    column: $table.weightUnit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get themeChoice => $composableBuilder(
+    column: $table.themeChoice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get trainingReminder => $composableBuilder(
+    column: $table.trainingReminder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinutes => $composableBuilder(
+    column: $table.reminderMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get weeklySummary => $composableBuilder(
+    column: $table.weeklySummary,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SettingsEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingsEntriesTable> {
+  $$SettingsEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get weightUnit => $composableBuilder(
+    column: $table.weightUnit,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get themeChoice => $composableBuilder(
+    column: $table.themeChoice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get trainingReminder => $composableBuilder(
+    column: $table.trainingReminder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinutes => $composableBuilder(
+    column: $table.reminderMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get weeklySummary => $composableBuilder(
+    column: $table.weeklySummary,
+    builder: (column) => column,
+  );
+}
+
+class $$SettingsEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SettingsEntriesTable,
+          SettingsRow,
+          $$SettingsEntriesTableFilterComposer,
+          $$SettingsEntriesTableOrderingComposer,
+          $$SettingsEntriesTableAnnotationComposer,
+          $$SettingsEntriesTableCreateCompanionBuilder,
+          $$SettingsEntriesTableUpdateCompanionBuilder,
+          (
+            SettingsRow,
+            BaseReferences<_$AppDatabase, $SettingsEntriesTable, SettingsRow>,
+          ),
+          SettingsRow,
+          PrefetchHooks Function()
+        > {
+  $$SettingsEntriesTableTableManager(
+    _$AppDatabase db,
+    $SettingsEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettingsEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettingsEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SettingsEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> weightUnit = const Value.absent(),
+                Value<String> themeChoice = const Value.absent(),
+                Value<bool> trainingReminder = const Value.absent(),
+                Value<int> reminderMinutes = const Value.absent(),
+                Value<bool> weeklySummary = const Value.absent(),
+              }) => SettingsEntriesCompanion(
+                id: id,
+                weightUnit: weightUnit,
+                themeChoice: themeChoice,
+                trainingReminder: trainingReminder,
+                reminderMinutes: reminderMinutes,
+                weeklySummary: weeklySummary,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> weightUnit = const Value.absent(),
+                Value<String> themeChoice = const Value.absent(),
+                Value<bool> trainingReminder = const Value.absent(),
+                Value<int> reminderMinutes = const Value.absent(),
+                Value<bool> weeklySummary = const Value.absent(),
+              }) => SettingsEntriesCompanion.insert(
+                id: id,
+                weightUnit: weightUnit,
+                themeChoice: themeChoice,
+                trainingReminder: trainingReminder,
+                reminderMinutes: reminderMinutes,
+                weeklySummary: weeklySummary,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SettingsEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SettingsEntriesTable,
+      SettingsRow,
+      $$SettingsEntriesTableFilterComposer,
+      $$SettingsEntriesTableOrderingComposer,
+      $$SettingsEntriesTableAnnotationComposer,
+      $$SettingsEntriesTableCreateCompanionBuilder,
+      $$SettingsEntriesTableUpdateCompanionBuilder,
+      (
+        SettingsRow,
+        BaseReferences<_$AppDatabase, $SettingsEntriesTable, SettingsRow>,
+      ),
+      SettingsRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1433,4 +2098,6 @@ class $AppDatabaseManager {
       $$ExercisesTableTableManager(_db, _db.exercises);
   $$TrainingEntriesTableTableManager get trainingEntries =>
       $$TrainingEntriesTableTableManager(_db, _db.trainingEntries);
+  $$SettingsEntriesTableTableManager get settingsEntries =>
+      $$SettingsEntriesTableTableManager(_db, _db.settingsEntries);
 }
