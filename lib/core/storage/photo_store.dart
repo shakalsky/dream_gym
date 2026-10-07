@@ -7,9 +7,9 @@ import 'package:path_provider/path_provider.dart';
 
 /// Where a photo is coming from.
 ///
-/// Declared here so that `image_picker` stops at this file: the form cubit and
-/// the widgets talk about cameras and libraries, not about plugins, and a test
-/// never has to stand one up.
+/// Declared here so that `image_picker` stops at this file: the form notifier
+/// and the widgets talk about cameras and libraries, not about plugins, and a
+/// test never has to stand one up.
 enum PhotoSource {
   camera('Take a photo'),
   gallery('Choose from library');

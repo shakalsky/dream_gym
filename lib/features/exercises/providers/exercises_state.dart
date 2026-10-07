@@ -1,4 +1,4 @@
-part of 'exercises_cubit.dart';
+part of 'exercises_notifier.dart';
 
 enum ExercisesStatus { loading, success, failure }
 

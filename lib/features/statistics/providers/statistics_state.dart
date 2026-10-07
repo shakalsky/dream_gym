@@ -1,4 +1,4 @@
-part of 'statistics_cubit.dart';
+part of 'statistics_notifier.dart';
 
 enum StatisticsStatus { loading, success, failure }
 

@@ -1,15 +1,19 @@
 import 'package:dream_gym/core/format/training_format.dart';
-import 'package:dream_gym/features/training/cubit/log_training_cubit.dart';
+import 'package:dream_gym/core/providers.dart';
 import 'package:dream_gym/features/training/domain/exercise_progress.dart';
+import 'package:dream_gym/features/training/providers/log_training_notifier.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
+
+/// The provider of this one form, handed down to the fields that make it up.
+typedef _FormProvider = NotifierProvider<LogTrainingNotifier, LogTrainingState>;
 
 /// 'I just did four sets of sixty' — the form the reader uses most.
 ///
 /// A sheet rather than a screen: it opens over the exercise, keeps its numbers
 /// in sight, and closes back to it.
-class LogTrainingSheet extends StatelessWidget {
+class LogTrainingSheet extends ConsumerStatefulWidget {
   const LogTrainingSheet({
     required this.exerciseId,
     required this.exerciseName,
@@ -46,31 +50,17 @@ class LogTrainingSheet extends StatelessWidget {
   final TrainingSession? lastSession;
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => LogTrainingCubit(
-        training: context.read(),
-        exerciseId: exerciseId,
-        today: DateTime.now(),
-        lastSession: lastSession,
-      ),
-      child: _LogTrainingForm(exerciseName: exerciseName),
-    );
-  }
+  ConsumerState<LogTrainingSheet> createState() => _LogTrainingSheetState();
 }
 
-class _LogTrainingForm extends StatefulWidget {
-  const _LogTrainingForm({required this.exerciseName});
+class _LogTrainingSheetState extends ConsumerState<LogTrainingSheet> {
+  late final _FormProvider _form = logTrainingProvider((
+    exerciseId: widget.exerciseId,
+    lastSession: widget.lastSession,
+  ));
 
-  final String exerciseName;
-
-  @override
-  State<_LogTrainingForm> createState() => _LogTrainingFormState();
-}
-
-class _LogTrainingFormState extends State<_LogTrainingForm> {
   late final TextEditingController _weight = TextEditingController(
-    text: context.read<LogTrainingCubit>().state.weightText,
+    text: ref.read(_form).weightText,
   );
 
   @override
@@ -81,42 +71,42 @@ class _LogTrainingFormState extends State<_LogTrainingForm> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<LogTrainingCubit, LogTrainingState>(
-      listenWhen: (previous, current) => previous.status != current.status,
-      listener: (context, state) {
-        if (state.status == LogTrainingStatus.saved) {
-          Navigator.of(context).pop();
-        } else if (state.status == LogTrainingStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error ?? 'Something went wrong')),
-          );
-        }
-      },
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: AppSizes.defaultPadding,
-          right: AppSizes.defaultPadding,
-          bottom:
-              MediaQuery.viewInsetsOf(context).bottom + AppSizes.defaultPadding,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextHeading.small(
-              text: 'Add result',
-              subtitle: widget.exerciseName,
-            ),
-            AppSizes.padding20.verticalSpace,
-            const _DayPicker(),
-            AppSizes.padding20.verticalSpace,
-            const _SetsStepper(),
-            AppSizes.padding20.verticalSpace,
-            _WeightField(controller: _weight),
-            AppSizes.padding24.verticalSpace,
-            const _SaveButton(),
-          ],
-        ),
+    ref.listen(_form, (previous, next) {
+      if (previous?.status == next.status) return;
+
+      if (next.status == LogTrainingStatus.saved) {
+        Navigator.of(context).pop();
+      } else if (next.status == LogTrainingStatus.failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error ?? 'Something went wrong')),
+        );
+      }
+    });
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSizes.defaultPadding,
+        right: AppSizes.defaultPadding,
+        bottom:
+            MediaQuery.viewInsetsOf(context).bottom + AppSizes.defaultPadding,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextHeading.small(
+            text: 'Add result',
+            subtitle: widget.exerciseName,
+          ),
+          AppSizes.padding20.verticalSpace,
+          _DayPicker(form: _form),
+          AppSizes.padding20.verticalSpace,
+          _SetsStepper(form: _form),
+          AppSizes.padding20.verticalSpace,
+          _WeightField(form: _form, controller: _weight),
+          AppSizes.padding24.verticalSpace,
+          _SaveButton(form: _form),
+        ],
       ),
     );
   }
@@ -142,14 +132,17 @@ class _FieldLabel extends StatelessWidget {
 ///
 /// Those two cover almost every entry — results get written down in the gym or
 /// on the same evening — so they are one tap, and everything else is two.
-class _DayPicker extends StatelessWidget {
-  const _DayPicker();
+class _DayPicker extends ConsumerWidget {
+  const _DayPicker({required this.form});
+
+  final _FormProvider form;
 
   @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<LogTrainingCubit>();
-    final selected = context.watch<LogTrainingCubit>().state.day;
-    final today = dayOf(DateTime.now());
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(form.notifier);
+    final selected = ref.watch(form.select((state) => state.day));
+    // The notifier's clock, so 'Today' is selected when the form opens on it.
+    final today = dayOf(ref.watch(clockProvider)());
     final yesterday = today.subtract(const Duration(days: 1));
     final isOther = selected != today && selected != yesterday;
 
@@ -164,17 +157,22 @@ class _DayPicker extends StatelessWidget {
             AppChip(
               title: 'Today',
               isSelected: selected == today,
-              onPressed: () => cubit.dayChanged(today),
+              onPressed: () => notifier.dayChanged(today),
             ),
             AppChip(
               title: 'Yesterday',
               isSelected: selected == yesterday,
-              onPressed: () => cubit.dayChanged(yesterday),
+              onPressed: () => notifier.dayChanged(yesterday),
             ),
             AppChip(
               title: isOther ? formatDate(selected) : 'Other',
               isSelected: isOther,
-              onPressed: () => _pickDate(context, selected: selected),
+              onPressed: () => _pickDate(
+                context,
+                notifier,
+                today: today,
+                selected: selected,
+              ),
             ),
           ],
         ),
@@ -183,12 +181,11 @@ class _DayPicker extends StatelessWidget {
   }
 
   Future<void> _pickDate(
-    BuildContext context, {
+    BuildContext context,
+    LogTrainingNotifier notifier, {
+    required DateTime today,
     required DateTime selected,
   }) async {
-    final cubit = context.read<LogTrainingCubit>();
-    final today = dayOf(DateTime.now());
-
     final picked = await showDatePicker(
       context: context,
       initialDate: selected,
@@ -197,17 +194,19 @@ class _DayPicker extends StatelessWidget {
       lastDate: today,
     );
 
-    if (picked != null) cubit.dayChanged(picked);
+    if (picked != null) notifier.dayChanged(picked);
   }
 }
 
-class _SetsStepper extends StatelessWidget {
-  const _SetsStepper();
+class _SetsStepper extends ConsumerWidget {
+  const _SetsStepper({required this.form});
+
+  final _FormProvider form;
 
   @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<LogTrainingCubit>();
-    final sets = context.watch<LogTrainingCubit>().state.sets;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(form.notifier);
+    final sets = ref.watch(form.select((state) => state.sets));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +218,9 @@ class _SetsStepper extends StatelessWidget {
             _StepButton(
               icon: Icons.remove,
               semanticLabel: 'One set fewer',
-              onPressed: sets > 1 ? () => cubit.setsChanged(sets - 1) : null,
+              onPressed: sets > 1
+                  ? () => notifier.setsChanged(sets - 1)
+                  : null,
             ),
             SizedBox(
               width: 72,
@@ -233,8 +234,8 @@ class _SetsStepper extends StatelessWidget {
             _StepButton(
               icon: Icons.add,
               semanticLabel: 'One set more',
-              onPressed: sets < LogTrainingCubit.maxSets
-                  ? () => cubit.setsChanged(sets + 1)
+              onPressed: sets < LogTrainingNotifier.maxSets
+                  ? () => notifier.setsChanged(sets + 1)
                   : null,
             ),
           ],
@@ -284,15 +285,16 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-class _WeightField extends StatelessWidget {
-  const _WeightField({required this.controller});
+class _WeightField extends ConsumerWidget {
+  const _WeightField({required this.form, required this.controller});
 
+  final _FormProvider form;
   final TextEditingController controller;
 
   @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<LogTrainingCubit>();
-    final state = context.watch<LogTrainingCubit>().state;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(form.notifier);
+    final isSaving = ref.watch(form.select((state) => state.isSaving));
 
     return AppInput.gray(
       controller: controller,
@@ -306,7 +308,7 @@ class _WeightField extends StatelessWidget {
         FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
       ],
       textInputAction: TextInputAction.done,
-      enabled: !state.isSaving,
+      enabled: !isSaving,
       suffixIcon: Padding(
         padding: const EdgeInsets.only(right: AppSizes.padding12),
         child: Center(
@@ -318,18 +320,20 @@ class _WeightField extends StatelessWidget {
           ),
         ),
       ),
-      onChanged: cubit.weightChanged,
-      onFieldSubmitted: (_) => cubit.save(),
+      onChanged: notifier.weightChanged,
+      onFieldSubmitted: (_) => notifier.save(),
     );
   }
 }
 
-class _SaveButton extends StatelessWidget {
-  const _SaveButton();
+class _SaveButton extends ConsumerWidget {
+  const _SaveButton({required this.form});
+
+  final _FormProvider form;
 
   @override
-  Widget build(BuildContext context) {
-    final state = context.watch<LogTrainingCubit>().state;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(form);
     final weightKg = state.weightKg;
 
     return SizedBox(
@@ -340,9 +344,7 @@ class _SaveButton extends StatelessWidget {
             : 'Save ${formatSetsByWeight(state.sets, weightKg)}',
         buttonSize: PrimaryButtonSize.big,
         isLoading: state.isSaving,
-        onPressed: state.canSave
-            ? context.read<LogTrainingCubit>().save
-            : null,
+        onPressed: state.canSave ? ref.read(form.notifier).save : null,
       ),
     );
   }

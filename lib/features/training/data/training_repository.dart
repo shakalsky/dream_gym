@@ -1,8 +1,14 @@
 import 'package:dream_gym/core/database/app_database.dart';
 import 'package:dream_gym/core/format/training_format.dart';
 import 'package:dream_gym/core/ids/uuid.dart';
+import 'package:dream_gym/core/providers.dart';
 import 'package:dream_gym/features/training/domain/training_entry.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final trainingRepositoryProvider = Provider<TrainingRepository>(
+  (ref) => TrainingRepository(database: ref.watch(appDatabaseProvider)),
+);
 
 /// Reads and writes what was actually done in the gym.
 class TrainingRepository {

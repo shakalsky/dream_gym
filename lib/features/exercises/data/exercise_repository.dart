@@ -1,8 +1,17 @@
 import 'package:dream_gym/core/database/app_database.dart';
 import 'package:dream_gym/core/ids/uuid.dart';
+import 'package:dream_gym/core/providers.dart';
 import 'package:dream_gym/core/storage/photo_store.dart';
 import 'package:dream_gym/features/exercises/domain/exercise.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final exerciseRepositoryProvider = Provider<ExerciseRepository>(
+  (ref) => ExerciseRepository(
+    database: ref.watch(appDatabaseProvider),
+    photos: ref.watch(photoStoreProvider),
+  ),
+);
 
 /// Reads and writes exercises.
 ///

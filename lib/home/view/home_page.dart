@@ -51,8 +51,9 @@ class _HomePageState extends State<HomePage> {
     ];
 
     return Scaffold(
-      // Each tab keeps its scroll position and its cubit while the other is on
-      // screen — walking to Progress and back should not reload the list.
+      // Each tab keeps its scroll position and its provider state while the
+      // other is on screen — walking to Progress and back should not reload
+      // the list.
       body: IndexedStack(
         index: _index,
         children: [for (final tab in tabs) tab.page],

@@ -1,14 +1,14 @@
 import 'dart:io';
 
-import 'package:dream_gym/core/storage/photo_store.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:dream_gym/core/providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
 
 /// An exercise's photo, or a placeholder where one would be.
 ///
-/// Resolves the stored file name through the [PhotoStore] provided above it, so
-/// no screen has to know where the photo directory currently is.
-class ExercisePhoto extends StatelessWidget {
+/// Resolves the stored file name through [photoStoreProvider], so no screen
+/// has to know where the photo directory currently is.
+class ExercisePhoto extends ConsumerWidget {
   const ExercisePhoto({
     required this.photoFileName,
     this.width = AppSizes.imageSize,
@@ -34,12 +34,14 @@ class ExercisePhoto extends StatelessWidget {
   final double borderRadius;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appThemeColors;
     final fileName = photoFileName;
     final image =
         file ??
-        (fileName == null ? null : context.read<PhotoStore>().fileFor(fileName));
+        (fileName == null
+            ? null
+            : ref.watch(photoStoreProvider).fileFor(fileName));
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),

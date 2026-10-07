@@ -1,4 +1,4 @@
-part of 'log_training_cubit.dart';
+part of 'log_training_notifier.dart';
 
 enum LogTrainingStatus { editing, saving, saved, failure }
 

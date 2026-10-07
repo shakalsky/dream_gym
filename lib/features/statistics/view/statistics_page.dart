@@ -2,83 +2,69 @@ import 'package:dream_gym/core/format/training_format.dart';
 import 'package:dream_gym/core/ui/app_card.dart';
 import 'package:dream_gym/core/ui/empty_state.dart';
 import 'package:dream_gym/core/ui/stat_tile.dart';
-import 'package:dream_gym/features/statistics/cubit/statistics_cubit.dart';
 import 'package:dream_gym/features/statistics/domain/training_summary.dart';
+import 'package:dream_gym/features/statistics/providers/statistics_notifier.dart';
 import 'package:dream_gym/features/statistics/widgets/progress_chart.dart';
 import 'package:dream_gym/features/training/domain/exercise_log.dart';
 import 'package:dream_gym/features/training/domain/exercise_progress.dart';
 import 'package:dream_gym/features/training/view/exercise_detail_page.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
 
 /// Progress: this week at the top, then one exercise's history in detail.
-class StatisticsPage extends StatelessWidget {
+class StatisticsPage extends ConsumerWidget {
   const StatisticsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => StatisticsCubit(
-        exercises: context.read(),
-        training: context.read(),
-      ),
-      child: const StatisticsView(),
-    );
-  }
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(statisticsProvider);
 
-@visibleForTesting
-class StatisticsView extends StatelessWidget {
-  const StatisticsView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AppAppBar(title: 'Progress', centerTitle: false),
-      body: BlocBuilder<StatisticsCubit, StatisticsState>(
-        builder: (context, state) {
-          if (state.status == StatisticsStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: _body(state),
+    );
+  }
 
-          if (!state.hasData) {
-            return EmptyState(
-              icon: Icons.insights_outlined,
-              title: 'Nothing to show yet',
-              message: state.logs.isEmpty
-                  ? 'Add an exercise, then log a couple of sessions. Your '
-                        'progress shows up here.'
-                  : 'Log a session against one of your exercises and its '
-                        'progress shows up here.',
-            );
-          }
+  Widget _body(StatisticsState state) {
+    if (state.status == StatisticsStatus.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-          final selected = state.selected;
+    if (!state.hasData) {
+      return EmptyState(
+        icon: Icons.insights_outlined,
+        title: 'Nothing to show yet',
+        message: state.logs.isEmpty
+            ? 'Add an exercise, then log a couple of sessions. Your '
+                  'progress shows up here.'
+            : 'Log a session against one of your exercises and its '
+                  'progress shows up here.',
+      );
+    }
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSizes.defaultPadding,
-              AppSizes.padding12,
-              AppSizes.defaultPadding,
-              AppSizes.padding32,
-            ),
-            children: [
-              _WeekCard(summary: state.summary),
-              AppSizes.padding24.verticalSpace,
-              _ExercisePicker(
-                logs: state.trained,
-                selectedId: state.selectedExerciseId,
-              ),
-              if (selected != null) ...[
-                AppSizes.defaultPadding.verticalSpace,
-                _ProgressCard(log: selected, metric: state.metric),
-                AppSizes.defaultPadding.verticalSpace,
-                _Records(log: selected),
-              ],
-            ],
-          );
-        },
+    final selected = state.selected;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSizes.defaultPadding,
+        AppSizes.padding12,
+        AppSizes.defaultPadding,
+        AppSizes.padding32,
       ),
+      children: [
+        _WeekCard(summary: state.summary),
+        AppSizes.padding24.verticalSpace,
+        _ExercisePicker(
+          logs: state.trained,
+          selectedId: state.selectedExerciseId,
+        ),
+        if (selected != null) ...[
+          AppSizes.defaultPadding.verticalSpace,
+          _ProgressCard(log: selected, metric: state.metric),
+          AppSizes.defaultPadding.verticalSpace,
+          _Records(log: selected),
+        ],
+      ],
     );
   }
 }
@@ -160,15 +146,15 @@ class _WeekCard extends StatelessWidget {
 }
 
 /// Which exercise the chart is about.
-class _ExercisePicker extends StatelessWidget {
+class _ExercisePicker extends ConsumerWidget {
   const _ExercisePicker({required this.logs, required this.selectedId});
 
   final List<ExerciseLog> logs;
   final String? selectedId;
 
   @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<StatisticsCubit>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(statisticsProvider.notifier);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -179,7 +165,7 @@ class _ExercisePicker extends StatelessWidget {
             AppChip(
               title: log.exercise.name,
               isSelected: log.exercise.id == selectedId,
-              onPressed: () => cubit.exerciseSelected(log.exercise.id),
+              onPressed: () => notifier.exerciseSelected(log.exercise.id),
             ),
         ],
       ),
@@ -188,17 +174,17 @@ class _ExercisePicker extends StatelessWidget {
 }
 
 /// The chart, and the switch that decides what it plots.
-class _ProgressCard extends StatefulWidget {
+class _ProgressCard extends ConsumerStatefulWidget {
   const _ProgressCard({required this.log, required this.metric});
 
   final ExerciseLog log;
   final ProgressMetric metric;
 
   @override
-  State<_ProgressCard> createState() => _ProgressCardState();
+  ConsumerState<_ProgressCard> createState() => _ProgressCardState();
 }
 
-class _ProgressCardState extends State<_ProgressCard>
+class _ProgressCardState extends ConsumerState<_ProgressCard>
     with SingleTickerProviderStateMixin {
   late final TabController _metrics = TabController(
     length: ProgressMetric.values.length,
@@ -228,9 +214,9 @@ class _ProgressCardState extends State<_ProgressCard>
           AppSegmentBar.small(
             controller: _metrics,
             selectedIndex: ProgressMetric.values.indexOf(widget.metric),
-            onSelect: (index) => context.read<StatisticsCubit>().metricSelected(
-              ProgressMetric.values[index ?? 0],
-            ),
+            onSelect: (index) => ref
+                .read(statisticsProvider.notifier)
+                .metricSelected(ProgressMetric.values[index ?? 0]),
             tabs: [
               for (final metric in ProgressMetric.values) Tab(text: metric.label),
             ],

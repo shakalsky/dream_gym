@@ -2,29 +2,8 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:ui';
 
-import 'package:bloc/bloc.dart';
 import 'package:dream_gym/env/app_env.dart';
 import 'package:flutter/widgets.dart';
-
-/// Logs every bloc change and error.
-///
-/// Installed only when [AppEnv.verboseLogging] is on, which is development by
-/// default — a production build should not narrate its own state transitions.
-class AppBlocObserver extends BlocObserver {
-  const AppBlocObserver();
-
-  @override
-  void onChange(BlocBase<dynamic> bloc, Change<dynamic> change) {
-    super.onChange(bloc, change);
-    log('onChange(${bloc.runtimeType}, $change)');
-  }
-
-  @override
-  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
-    log('onError(${bloc.runtimeType}, $error, $stackTrace)');
-    super.onError(bloc, error, stackTrace);
-  }
-}
 
 /// Shared startup for every flavour.
 ///
@@ -49,11 +28,8 @@ Future<void> bootstrap({
     return true;
   };
 
-  if (env.verboseLogging) {
-    Bloc.observer = const AppBlocObserver();
-  }
-
-  // Add cross-flavor configuration here.
+  // Add cross-flavor configuration here. Provider logging is not: it is
+  // installed on the `ProviderScope`, which `buildApp` creates.
 
   runApp(await builder(env));
 }

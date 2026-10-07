@@ -45,8 +45,8 @@ enum ThemeChoice {
 
 /// Everything the settings screen can change.
 ///
-/// A value object, so the cubit can emit a changed copy and the repository can
-/// write one without either knowing about the table's columns.
+/// A value object, so the notifier can publish a changed copy and the
+/// repository can write one without either knowing about the table's columns.
 final class AppSettings extends Equatable {
   const AppSettings({
     this.unit = WeightUnit.kilograms,

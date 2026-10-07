@@ -1,15 +1,19 @@
 import 'dart:io';
 
 import 'package:dream_gym/core/storage/photo_store.dart';
-import 'package:dream_gym/features/exercises/cubit/exercise_form_cubit.dart';
 import 'package:dream_gym/features/exercises/domain/exercise.dart';
 import 'package:dream_gym/features/exercises/domain/photo_selection.dart';
+import 'package:dream_gym/features/exercises/providers/exercise_form_notifier.dart';
 import 'package:dream_gym/features/exercises/widgets/exercise_photo.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
 
+/// The provider of this one form, handed down to the fields that make it up.
+typedef _FormProvider =
+    NotifierProvider<ExerciseFormNotifier, ExerciseFormState>;
+
 /// Adds a new exercise, or edits one that exists.
-class ExerciseFormPage extends StatelessWidget {
+class ExerciseFormPage extends ConsumerStatefulWidget {
   const ExerciseFormPage({this.exercise, super.key});
 
   /// [exercise] null means 'add', otherwise the form opens on that exercise.
@@ -20,29 +24,14 @@ class ExerciseFormPage extends StatelessWidget {
   final Exercise? exercise;
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ExerciseFormCubit(
-        exercises: context.read(),
-        photos: context.read(),
-        exercise: exercise,
-      ),
-      child: const ExerciseFormView(),
-    );
-  }
+  ConsumerState<ExerciseFormPage> createState() => _ExerciseFormPageState();
 }
 
-@visibleForTesting
-class ExerciseFormView extends StatefulWidget {
-  const ExerciseFormView({super.key});
+class _ExerciseFormPageState extends ConsumerState<ExerciseFormPage> {
+  late final _FormProvider _form = exerciseFormProvider(widget.exercise);
 
-  @override
-  State<ExerciseFormView> createState() => _ExerciseFormViewState();
-}
-
-class _ExerciseFormViewState extends State<ExerciseFormView> {
   late final TextEditingController _name = TextEditingController(
-    text: context.read<ExerciseFormCubit>().state.name,
+    text: ref.read(_form).name,
   );
 
   @override
@@ -53,56 +42,59 @@ class _ExerciseFormViewState extends State<ExerciseFormView> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = context.read<ExerciseFormCubit>().state.isEditing;
+    ref.listen(_form, (previous, next) {
+      if (previous?.status == next.status) return;
 
-    return BlocListener<ExerciseFormCubit, ExerciseFormState>(
-      listenWhen: (previous, current) => previous.status != current.status,
-      listener: (context, state) {
-        if (state.status == ExerciseFormStatus.saved) {
-          Navigator.of(context).pop();
-        } else if (state.status == ExerciseFormStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error ?? 'Something went wrong')),
-          );
-        }
-      },
-      child: Scaffold(
-        appBar: AppAppBar(
-          title: isEditing ? 'Edit exercise' : 'New exercise',
-          hasBackButton: true,
-        ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(AppSizes.defaultPadding),
-                  children: [
-                    const _PhotoField(),
-                    AppSizes.padding24.verticalSpace,
-                    _NameField(controller: _name),
-                  ],
-                ),
+      if (next.status == ExerciseFormStatus.saved) {
+        Navigator.of(context).pop();
+      } else if (next.status == ExerciseFormStatus.failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error ?? 'Something went wrong')),
+        );
+      }
+    });
+
+    final isEditing = ref.read(_form).isEditing;
+
+    return Scaffold(
+      appBar: AppAppBar(
+        title: isEditing ? 'Edit exercise' : 'New exercise',
+        hasBackButton: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSizes.defaultPadding),
+                children: [
+                  _PhotoField(form: _form),
+                  AppSizes.padding24.verticalSpace,
+                  _NameField(form: _form, controller: _name),
+                ],
               ),
-              const _SaveButton(),
-            ],
-          ),
+            ),
+            _SaveButton(form: _form),
+          ],
         ),
       ),
     );
   }
 }
 
-class _NameField extends StatelessWidget {
-  const _NameField({required this.controller});
+class _NameField extends ConsumerWidget {
+  const _NameField({required this.form, required this.controller});
+
+  final _FormProvider form;
 
   /// Owned by the form's state, so the field keeps its text and cursor across
   /// the rebuilds every keystroke causes.
   final TextEditingController controller;
 
   @override
-  Widget build(BuildContext context) {
-    final state = context.watch<ExerciseFormCubit>().state;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isSaving = ref.watch(form.select((state) => state.isSaving));
+    final notifier = ref.read(form.notifier);
 
     return AppInput.gray(
       controller: controller,
@@ -111,32 +103,35 @@ class _NameField extends StatelessWidget {
       placeholder: 'Bench press',
       textCapitalization: TextCapitalization.sentences,
       textInputAction: TextInputAction.done,
-      enabled: !state.isSaving,
-      onChanged: context.read<ExerciseFormCubit>().nameChanged,
-      onFieldSubmitted: (_) => context.read<ExerciseFormCubit>().save(),
+      enabled: !isSaving,
+      onChanged: notifier.nameChanged,
+      onFieldSubmitted: (_) => notifier.save(),
     );
   }
 }
 
 /// The photo, and the only way to change it.
-class _PhotoField extends StatelessWidget {
-  const _PhotoField();
+class _PhotoField extends ConsumerWidget {
+  const _PhotoField({required this.form});
+
+  final _FormProvider form;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appThemeColors;
-    final state = context.watch<ExerciseFormCubit>().state;
-    final hasPhoto = state.photo is! NoPhoto;
+    final photo = ref.watch(form.select((state) => state.photo));
+    final notifier = ref.read(form.notifier);
+    final hasPhoto = photo is! NoPhoto;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () => _choose(context, hasPhoto: hasPhoto),
+          onTap: () => _choose(context, notifier),
           child: SizedBox(
             height: 200,
             width: double.infinity,
-            child: switch (state.photo) {
+            child: switch (photo) {
               NoPhoto() => DecoratedBox(
                 decoration: BoxDecoration(
                   color: colors.surface1,
@@ -184,11 +179,11 @@ class _PhotoField extends StatelessWidget {
             children: [
               AppLiteButton.small(
                 text: 'Replace',
-                onPressed: () => _choose(context, hasPhoto: hasPhoto),
+                onPressed: () => _choose(context, notifier),
               ),
               AppLiteButton.small(
                 text: 'Remove',
-                onPressed: context.read<ExerciseFormCubit>().removePhoto,
+                onPressed: notifier.removePhoto,
               ),
             ],
           ),
@@ -197,8 +192,10 @@ class _PhotoField extends StatelessWidget {
     );
   }
 
-  Future<void> _choose(BuildContext context, {required bool hasPhoto}) async {
-    final cubit = context.read<ExerciseFormCubit>();
+  Future<void> _choose(
+    BuildContext context,
+    ExerciseFormNotifier notifier,
+  ) async {
     final source = await showModalBottomSheet<PhotoSource>(
       context: context,
       showDragHandle: true,
@@ -226,16 +223,18 @@ class _PhotoField extends StatelessWidget {
       ),
     );
 
-    if (source != null) await cubit.pickPhoto(source);
+    if (source != null) await notifier.pickPhoto(source);
   }
 }
 
-class _SaveButton extends StatelessWidget {
-  const _SaveButton();
+class _SaveButton extends ConsumerWidget {
+  const _SaveButton({required this.form});
+
+  final _FormProvider form;
 
   @override
-  Widget build(BuildContext context) {
-    final state = context.watch<ExerciseFormCubit>().state;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(form);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -250,9 +249,7 @@ class _SaveButton extends StatelessWidget {
           text: state.isEditing ? 'Save changes' : 'Add exercise',
           buttonSize: PrimaryButtonSize.big,
           isLoading: state.isSaving,
-          onPressed: state.canSave
-              ? context.read<ExerciseFormCubit>().save
-              : null,
+          onPressed: state.canSave ? ref.read(form.notifier).save : null,
         ),
       ),
     );

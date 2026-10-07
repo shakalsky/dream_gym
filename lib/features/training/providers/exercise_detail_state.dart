@@ -1,4 +1,4 @@
-part of 'exercise_detail_cubit.dart';
+part of 'exercise_detail_notifier.dart';
 
 enum ExerciseDetailStatus {
   loading,

@@ -1,11 +1,16 @@
-import 'dart:async';
-
-import 'package:bloc/bloc.dart';
 import 'package:dream_gym/features/settings/data/settings_repository.dart';
 import 'package:dream_gym/features/settings/domain/app_settings.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 part 'settings_state.dart';
+
+/// Not auto-disposed: `App` watches it for the theme, so it lives as long as
+/// the app does, and the settings page reads this same instance rather than a
+/// second one that could disagree with it.
+final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(
+  SettingsNotifier.new,
+);
 
 /// Drives the settings screen — and, through [SettingsState.settings], the
 /// theme of the whole app.
@@ -14,15 +19,21 @@ part 'settings_state.dart';
 /// (once PowerSync is carrying the row) arrives without a refresh. Writes go
 /// straight to the repository and come back through the subscription: one
 /// source of truth, no optimistic copy to reconcile.
-class SettingsCubit extends Cubit<SettingsState> {
-  SettingsCubit({required SettingsRepository settings})
-    : _settings = settings,
-      super(const SettingsState()) {
-    _subscription = _settings.watch().listen(_onSettings, onError: _onError);
-  }
+class SettingsNotifier extends Notifier<SettingsState> {
+  late SettingsRepository _settings;
 
-  final SettingsRepository _settings;
-  late final StreamSubscription<AppSettings> _subscription;
+  @override
+  SettingsState build() {
+    _settings = ref.watch(settingsRepositoryProvider);
+
+    final subscription = _settings.watch().listen(
+      _onSettings,
+      onError: _onError,
+    );
+    ref.onDispose(subscription.cancel);
+
+    return const SettingsState();
+  }
 
   Future<void> unitChanged(WeightUnit unit) =>
       _write(state.settings.copyWith(unit: unit));
@@ -45,31 +56,23 @@ class SettingsCubit extends Cubit<SettingsState> {
   /// Clears a failure the screen has finished reporting.
   void errorShown() {
     if (state.error == null) return;
-    emit(state.copyWith(status: SettingsStatus.success));
-  }
-
-  @override
-  Future<void> close() async {
-    await _subscription.cancel();
-    return super.close();
+    state = state.copyWith(status: SettingsStatus.success);
   }
 
   Future<void> _write(AppSettings settings) async {
     try {
       await _settings.save(settings);
     } on Exception catch (error) {
-      if (isClosed) return;
-      emit(state.copyWith(status: SettingsStatus.failure, error: '$error'));
+      if (!ref.mounted) return;
+      state = state.copyWith(status: SettingsStatus.failure, error: '$error');
     }
   }
 
   void _onSettings(AppSettings settings) {
-    if (isClosed) return;
-    emit(SettingsState(status: SettingsStatus.success, settings: settings));
+    state = SettingsState(status: SettingsStatus.success, settings: settings);
   }
 
   void _onError(Object error) {
-    if (isClosed) return;
-    emit(state.copyWith(status: SettingsStatus.failure, error: '$error'));
+    state = state.copyWith(status: SettingsStatus.failure, error: '$error');
   }
 }

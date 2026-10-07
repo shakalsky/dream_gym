@@ -1,6 +1,12 @@
 import 'package:dream_gym/core/database/app_database.dart';
+import 'package:dream_gym/core/providers.dart';
 import 'package:dream_gym/features/settings/domain/app_settings.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final settingsRepositoryProvider = Provider<SettingsRepository>(
+  (ref) => SettingsRepository(database: ref.watch(appDatabaseProvider)),
+);
 
 /// Reads and writes the reader's preferences.
 ///

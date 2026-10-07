@@ -1,4 +1,4 @@
-part of 'exercise_form_cubit.dart';
+part of 'exercise_form_notifier.dart';
 
 enum ExerciseFormStatus { editing, saving, saved, failure }
 

@@ -1,4 +1,4 @@
-part of 'settings_cubit.dart';
+part of 'settings_notifier.dart';
 
 enum SettingsStatus { loading, success, failure }
 

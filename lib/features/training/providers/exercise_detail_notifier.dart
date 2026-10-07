@@ -1,29 +1,41 @@
-import 'dart:async';
-
-import 'package:bloc/bloc.dart';
 import 'package:dream_gym/core/streams/combine_latest.dart';
 import 'package:dream_gym/features/exercises/data/exercise_repository.dart';
 import 'package:dream_gym/features/exercises/domain/exercise.dart';
 import 'package:dream_gym/features/training/data/training_repository.dart';
 import 'package:dream_gym/features/training/domain/exercise_progress.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 
 part 'exercise_detail_state.dart';
 
+/// One per exercise id, and gone once its screen closes.
+final NotifierProviderFamily<
+  ExerciseDetailNotifier,
+  ExerciseDetailState,
+  String
+>
+exerciseDetailProvider = NotifierProvider.autoDispose.family(
+  ExerciseDetailNotifier.new,
+);
+
 /// Drives one exercise's screen: its photo, its numbers and its history.
-class ExerciseDetailCubit extends Cubit<ExerciseDetailState> {
-  ExerciseDetailCubit({
-    required ExerciseRepository exercises,
-    required TrainingRepository training,
-    required String exerciseId,
-  }) : _exercises = exercises,
-       _training = training,
-       _exerciseId = exerciseId,
-       super(const ExerciseDetailState()) {
-    _subscription =
+class ExerciseDetailNotifier extends Notifier<ExerciseDetailState> {
+  ExerciseDetailNotifier(this._exerciseId);
+
+  final String _exerciseId;
+  late ExerciseRepository _exercises;
+  late TrainingRepository _training;
+
+  @override
+  ExerciseDetailState build() {
+    _exercises = ref.watch(exerciseRepositoryProvider);
+    _training = ref.watch(trainingRepositoryProvider);
+
+    final subscription =
         combineLatest2(
-          exercises.watch(exerciseId),
-          training.watchForExercise(exerciseId),
+          _exercises.watch(_exerciseId),
+          _training.watchForExercise(_exerciseId),
           (exercise, entries) => exercise == null
               ? const ExerciseDetailState(status: ExerciseDetailStatus.gone)
               : ExerciseDetailState(
@@ -31,13 +43,11 @@ class ExerciseDetailCubit extends Cubit<ExerciseDetailState> {
                   exercise: exercise,
                   progress: ExerciseProgress.fromEntries(entries),
                 ),
-        ).listen(_onState, onError: _onError);
-  }
+        ).listen((next) => state = next, onError: _onError);
+    ref.onDispose(subscription.cancel);
 
-  final ExerciseRepository _exercises;
-  final TrainingRepository _training;
-  final String _exerciseId;
-  late final StreamSubscription<ExerciseDetailState> _subscription;
+    return const ExerciseDetailState();
+  }
 
   /// Removes the exercise and its whole history.
   ///
@@ -48,8 +58,8 @@ class ExerciseDetailCubit extends Cubit<ExerciseDetailState> {
     try {
       await _exercises.delete(_exerciseId);
     } on Exception catch (error) {
-      if (isClosed) return;
-      emit(state.copyWith(error: '$error'));
+      if (!ref.mounted) return;
+      state = state.copyWith(error: '$error');
     }
   }
 
@@ -59,36 +69,23 @@ class ExerciseDetailCubit extends Cubit<ExerciseDetailState> {
     try {
       await _training.deleteEntry(id);
     } on Exception catch (error) {
-      if (isClosed) return;
-      emit(
-        state.copyWith(status: ExerciseDetailStatus.success, error: '$error'),
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        status: ExerciseDetailStatus.success,
+        error: '$error',
       );
     }
   }
 
   void errorShown() {
     if (state.error == null) return;
-    emit(state.copyWith());
-  }
-
-  @override
-  Future<void> close() async {
-    await _subscription.cancel();
-    return super.close();
-  }
-
-  void _onState(ExerciseDetailState next) {
-    if (isClosed) return;
-    emit(next);
+    state = state.copyWith();
   }
 
   void _onError(Object error) {
-    if (isClosed) return;
-    emit(
-      state.copyWith(
-        status: ExerciseDetailStatus.failure,
-        error: '$error',
-      ),
+    state = state.copyWith(
+      status: ExerciseDetailStatus.failure,
+      error: '$error',
     );
   }
 }

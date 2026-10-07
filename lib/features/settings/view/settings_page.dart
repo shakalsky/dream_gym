@@ -1,20 +1,20 @@
 import 'package:dream_gym/core/ui/app_card.dart';
 import 'package:dream_gym/env/app_env.dart';
-import 'package:dream_gym/features/settings/cubit/settings_cubit.dart';
 import 'package:dream_gym/features/settings/domain/account.dart';
 import 'package:dream_gym/features/settings/domain/app_settings.dart';
+import 'package:dream_gym/features/settings/providers/settings_notifier.dart';
 import 'package:dream_gym/features/settings/widgets/settings_row.dart';
 import 'package:dream_gym/features/settings/widgets/settings_section.dart';
 import 'package:dream_gym/features/settings/widgets/sync_card.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
 
 /// Everything about the app rather than about the training.
 ///
-/// The cubit is provided above `MaterialApp` (see `app/view/app.dart`) because
-/// the theme setting has to reach it — this page reads that instance rather
-/// than creating a second one.
-class SettingsPage extends StatelessWidget {
+/// Reads the same [settingsProvider] that `App` watches for the theme (see
+/// `app/view/app.dart`), so what this page shows and what the app looks like
+/// cannot disagree.
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({required this.env, this.account, super.key});
 
   final AppEnv env;
@@ -23,112 +23,100 @@ class SettingsPage extends StatelessWidget {
   final Account? account;
 
   @override
-  Widget build(BuildContext context) {
-    return SettingsView(env: env, account: account);
-  }
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(settingsProvider, (previous, next) {
+      final error = next.error;
+      if (error == null) return;
 
-@visibleForTesting
-class SettingsView extends StatelessWidget {
-  const SettingsView({required this.env, this.account, super.key});
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
+      ref.read(settingsProvider.notifier).errorShown();
+    });
 
-  final AppEnv env;
-  final Account? account;
+    final settings = ref.watch(
+      settingsProvider.select((state) => state.settings),
+    );
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AppAppBar(title: 'Settings', centerTitle: false),
-      body: BlocConsumer<SettingsCubit, SettingsState>(
-        listenWhen: (previous, current) => current.error != null,
-        listener: (context, state) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.error!)));
-          context.read<SettingsCubit>().errorShown();
-        },
-        builder: (context, state) {
-          final settings = state.settings;
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSizes.defaultPadding,
-              AppSizes.padding12,
-              AppSizes.defaultPadding,
-              AppSizes.padding32,
-            ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSizes.defaultPadding,
+          AppSizes.padding12,
+          AppSizes.defaultPadding,
+          AppSizes.padding32,
+        ),
+        children: [
+          _AccountCard(account: account),
+          AppSizes.padding24.verticalSpace,
+          SettingsSection(
+            title: 'Sync',
+            padding: EdgeInsets.zero,
             children: [
-              _AccountCard(account: account),
-              AppSizes.padding24.verticalSpace,
-              SettingsSection(
-                title: 'Sync',
-                padding: EdgeInsets.zero,
-                children: [
-                  // TODO(sync): replace with PowerSync's status stream.
-                  SyncCard(
-                    status: env.hasBackend
-                        ? SyncStatus(
-                            isConnected: true,
-                            lastSyncedAt: DateTime.now(),
-                          )
-                        : const SyncStatus.offline(),
-                    onSyncNow: env.hasBackend ? () {} : null,
-                  ),
-                ],
+              // TODO(sync): replace with PowerSync's status stream.
+              SyncCard(
+                status: env.hasBackend
+                    ? SyncStatus(
+                        isConnected: true,
+                        lastSyncedAt: DateTime.now(),
+                      )
+                    : const SyncStatus.offline(),
+                onSyncNow: env.hasBackend ? () {} : null,
               ),
-              AppSizes.padding24.verticalSpace,
-              _PreferencesSection(settings: settings),
-              AppSizes.padding24.verticalSpace,
-              _RemindersSection(settings: settings),
-              AppSizes.padding24.verticalSpace,
-              SettingsSection(
-                title: 'Your data',
-                padding: EdgeInsets.zero,
-                children: [
-                  SettingsRow(
-                    title: 'Export training log',
-                    subtitle: 'CSV of every session and set.',
-                    onTap: () {},
-                  ),
-                  const SettingsDivider(indent: AppSizes.defaultPadding),
-                  SettingsRow(
-                    title: 'Import from a file',
-                    subtitle: 'Bring in a log from another app.',
-                    onTap: () {},
-                  ),
-                ],
-              ),
-              AppSizes.padding24.verticalSpace,
-              SettingsSection(
-                title: 'About',
-                padding: EdgeInsets.zero,
-                children: [
-                  SettingsRow(
-                    title: 'Version',
-                    value: env.flavor.isDevelopment
-                        ? '1.0.0 (1) · ${env.flavor.name}'
-                        : '1.0.0 (1)',
-                  ),
-                  const SettingsDivider(indent: AppSizes.defaultPadding),
-                  SettingsRow(
-                    title: 'Open source licences',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) => const LicensePage(),
-                      ),
-                    ),
-                  ),
-                  const SettingsDivider(indent: AppSizes.defaultPadding),
-                  SettingsRow(title: 'Privacy policy', onTap: () {}),
-                ],
-              ),
-              if (account != null) ...[
-                AppSizes.padding24.verticalSpace,
-                _SignOutCard(onPressed: () {}),
-              ],
             ],
-          );
-        },
+          ),
+          AppSizes.padding24.verticalSpace,
+          _PreferencesSection(settings: settings),
+          AppSizes.padding24.verticalSpace,
+          _RemindersSection(settings: settings),
+          AppSizes.padding24.verticalSpace,
+          SettingsSection(
+            title: 'Your data',
+            padding: EdgeInsets.zero,
+            children: [
+              SettingsRow(
+                title: 'Export training log',
+                subtitle: 'CSV of every session and set.',
+                onTap: () {},
+              ),
+              const SettingsDivider(indent: AppSizes.defaultPadding),
+              SettingsRow(
+                title: 'Import from a file',
+                subtitle: 'Bring in a log from another app.',
+                onTap: () {},
+              ),
+            ],
+          ),
+          AppSizes.padding24.verticalSpace,
+          SettingsSection(
+            title: 'About',
+            padding: EdgeInsets.zero,
+            children: [
+              SettingsRow(
+                title: 'Version',
+                value: env.flavor.isDevelopment
+                    ? '1.0.0 (1) · ${env.flavor.name}'
+                    : '1.0.0 (1)',
+              ),
+              const SettingsDivider(indent: AppSizes.defaultPadding),
+              SettingsRow(
+                title: 'Open source licences',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const LicensePage(),
+                  ),
+                ),
+              ),
+              const SettingsDivider(indent: AppSizes.defaultPadding),
+              SettingsRow(title: 'Privacy policy', onTap: () {}),
+            ],
+          ),
+          if (account != null) ...[
+            AppSizes.padding24.verticalSpace,
+            _SignOutCard(onPressed: () {}),
+          ],
+        ],
       ),
     );
   }
@@ -223,14 +211,14 @@ class _AccountCard extends StatelessWidget {
 }
 
 /// Units and appearance.
-class _PreferencesSection extends StatelessWidget {
+class _PreferencesSection extends ConsumerWidget {
   const _PreferencesSection({required this.settings});
 
   final AppSettings settings;
 
   @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<SettingsCubit>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(settingsProvider.notifier);
 
     return SettingsSection(
       title: 'Preferences',
@@ -256,7 +244,7 @@ class _PreferencesSection extends StatelessWidget {
               AppChip(
                 title: unit.label,
                 isSelected: unit == settings.unit,
-                onPressed: () => cubit.unitChanged(unit),
+                onPressed: () => notifier.unitChanged(unit),
               ),
           ],
         ),
@@ -277,7 +265,7 @@ class _PreferencesSection extends StatelessWidget {
               AppChip(
                 title: choice.label,
                 isSelected: choice == settings.theme,
-                onPressed: () => cubit.themeChanged(choice),
+                onPressed: () => notifier.themeChanged(choice),
               ),
           ],
         ),
@@ -287,14 +275,14 @@ class _PreferencesSection extends StatelessWidget {
 }
 
 /// The two notifications the app sends.
-class _RemindersSection extends StatelessWidget {
+class _RemindersSection extends ConsumerWidget {
   const _RemindersSection({required this.settings});
 
   final AppSettings settings;
 
   @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<SettingsCubit>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(settingsProvider.notifier);
     final colors = context.appThemeColors;
 
     return SettingsSection(
@@ -307,7 +295,7 @@ class _RemindersSection extends StatelessWidget {
           trailing: SettingsSwitch(
             value: settings.trainingReminder,
             semanticLabel: 'Training reminder',
-            onChanged: (isOn) => cubit.reminderChanged(isOn: isOn),
+            onChanged: (isOn) => notifier.reminderChanged(isOn: isOn),
           ),
         ),
         // The time only exists as a question once the reminder is on.
@@ -324,7 +312,7 @@ class _RemindersSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppSizes.mediumButtonRadius),
               child: InkWell(
                 borderRadius: BorderRadius.circular(AppSizes.mediumButtonRadius),
-                onTap: () => _pickTime(context),
+                onTap: () => _pickTime(context, notifier),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSizes.padding14,
@@ -359,22 +347,24 @@ class _RemindersSection extends StatelessWidget {
           trailing: SettingsSwitch(
             value: settings.weeklySummary,
             semanticLabel: 'Weekly summary',
-            onChanged: (isOn) => cubit.weeklySummaryChanged(isOn: isOn),
+            onChanged: (isOn) => notifier.weeklySummaryChanged(isOn: isOn),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _pickTime(BuildContext context) async {
-    final cubit = context.read<SettingsCubit>();
+  Future<void> _pickTime(
+    BuildContext context,
+    SettingsNotifier notifier,
+  ) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: settings.reminderTime,
     );
 
     if (picked == null) return;
-    await cubit.reminderTimeChanged(picked.hour * 60 + picked.minute);
+    await notifier.reminderTimeChanged(picked.hour * 60 + picked.minute);
   }
 }
 

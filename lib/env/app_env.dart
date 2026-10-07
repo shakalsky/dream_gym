@@ -116,7 +116,7 @@ final class AppEnv extends Equatable {
   /// never read each other's rows.
   final String databaseName;
 
-  /// Whether to log bloc transitions and Dio traffic.
+  /// Whether to log provider changes and Dio traffic.
   final bool verboseLogging;
 
   /// Whether every backend value is present.
