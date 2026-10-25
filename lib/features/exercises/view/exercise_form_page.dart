@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:dream_gym/core/storage/photo_store.dart';
 import 'package:dream_gym/features/exercises/domain/exercise.dart';
+import 'package:dream_gym/features/exercises/domain/exercise_icon.dart';
 import 'package:dream_gym/features/exercises/domain/photo_selection.dart';
 import 'package:dream_gym/features/exercises/providers/exercise_form_notifier.dart';
+import 'package:dream_gym/features/exercises/widgets/exercise_icon_data.dart';
 import 'package:dream_gym/features/exercises/widgets/exercise_photo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
@@ -71,6 +73,8 @@ class _ExerciseFormPageState extends ConsumerState<ExerciseFormPage> {
                   _PhotoField(form: _form),
                   AppSizes.padding24.verticalSpace,
                   _NameField(form: _form, controller: _name),
+                  AppSizes.padding24.verticalSpace,
+                  _IconField(form: _form),
                 ],
               ),
             ),
@@ -106,6 +110,92 @@ class _NameField extends ConsumerWidget {
       enabled: !isSaving,
       onChanged: notifier.nameChanged,
       onFieldSubmitted: (_) => notifier.save(),
+    );
+  }
+}
+
+/// A grid of every [ExerciseIcon], with the chosen one highlighted.
+class _IconField extends ConsumerWidget {
+  const _IconField({required this.form});
+
+  final _FormProvider form;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appThemeColors;
+    final selected = ref.watch(form.select((state) => state.icon));
+    final isSaving = ref.watch(form.select((state) => state.isSaving));
+    final notifier = ref.read(form.notifier);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const InputLabel(text: 'Icon'),
+        Text(
+          'Shown when the exercise has no photo',
+          style: context.appFonts.bodySmall?.copyWith(color: colors.gray500),
+        ),
+        AppSizes.padding12.verticalSpace,
+        Wrap(
+          spacing: AppSizes.padding8,
+          runSpacing: AppSizes.padding8,
+          children: [
+            for (final icon in ExerciseIcon.values)
+              _IconOption(
+                icon: icon,
+                isSelected: icon == selected,
+                onTap: isSaving ? null : () => notifier.iconChanged(icon),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _IconOption extends StatelessWidget {
+  const _IconOption({
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final ExerciseIcon icon;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appThemeColors;
+    final radius = BorderRadius.circular(AppSizes.mediumButtonRadius);
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: icon.label,
+      excludeSemantics: true,
+      child: Material(
+        color: isSelected ? colors.primary100 : colors.surface1,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            color: isSelected ? colors.primary500 : colors.gray100,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: SizedBox.square(
+            dimension: 52,
+            child: Icon(
+              icon.data,
+              size: AppSizes.iconsSize28,
+              color: isSelected ? colors.primary500 : colors.gray600,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

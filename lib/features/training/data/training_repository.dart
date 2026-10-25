@@ -31,28 +31,54 @@ class TrainingRepository {
     return query.watch().map(_map);
   }
 
-  /// Writes down one line of a training.
+  /// Writes down a run of [sets], in the order they were done.
+  ///
+  /// Neighbouring sets with the same reps and weight become one line —
+  /// '3 × 10 @ 60 kg', not three — and a change of either starts a new one.
+  /// All lines are written together or not at all.
   ///
   /// [day] is rounded to local midnight so that entries made in the morning
   /// and the evening belong to the same session.
   Future<void> log({
     required String exerciseId,
     required DateTime day,
-    required int sets,
-    required double weightKg,
+    required List<SetResult> sets,
   }) async {
-    await _database
-        .into(_database.trainingEntries)
-        .insert(
+    final performedOn = dayOf(day);
+    final now = DateTime.now();
+    final lines = <({int sets, int reps, double weightKg})>[];
+
+    for (final set in sets) {
+      final last = lines.lastOrNull;
+      if (last != null &&
+          last.reps == set.reps &&
+          last.weightKg == set.weightKg) {
+        lines.last = (
+          sets: last.sets + 1,
+          reps: set.reps,
+          weightKg: set.weightKg,
+        );
+      } else {
+        lines.add((sets: 1, reps: set.reps, weightKg: set.weightKg));
+      }
+    }
+
+    await _database.batch((batch) {
+      batch.insertAll(_database.trainingEntries, [
+        for (final (index, line) in lines.indexed)
           TrainingEntriesCompanion.insert(
             id: newUuid(),
             exerciseId: exerciseId,
-            performedOn: dayOf(day),
-            sets: sets,
-            weightKg: weightKg,
-            createdAt: DateTime.now(),
+            performedOn: performedOn,
+            sets: line.sets,
+            reps: Value(line.reps),
+            weightKg: line.weightKg,
+            // Apart by a microsecond each, so the lines keep the order of the
+            // sets when read back.
+            createdAt: now.add(Duration(microseconds: index)),
           ),
-        );
+      ]);
+    });
   }
 
   Future<void> deleteEntry(String id) async {
@@ -63,13 +89,12 @@ class TrainingRepository {
 
   SimpleSelectStatement<$TrainingEntriesTable, TrainingEntryRow>
   _selectOrdered() {
-    return _database.select(_database.trainingEntries)
-      ..orderBy([
-        (entry) => OrderingTerm(expression: entry.performedOn),
-        // Within a day, the order they were written in — a warm-up logged
-        // first should read first.
-        (entry) => OrderingTerm(expression: entry.createdAt),
-      ]);
+    return _database.select(_database.trainingEntries)..orderBy([
+      (entry) => OrderingTerm(expression: entry.performedOn),
+      // Within a day, the order they were written in — a warm-up logged
+      // first should read first.
+      (entry) => OrderingTerm(expression: entry.createdAt),
+    ]);
   }
 
   List<TrainingEntry> _map(List<TrainingEntryRow> rows) => rows
@@ -79,6 +104,7 @@ class TrainingRepository {
           exerciseId: row.exerciseId,
           performedOn: row.performedOn,
           sets: row.sets,
+          reps: row.reps,
           weightKg: row.weightKg,
           createdAt: row.createdAt,
         ),

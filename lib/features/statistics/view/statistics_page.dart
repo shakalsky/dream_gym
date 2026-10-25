@@ -19,10 +19,7 @@ class StatisticsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(statisticsProvider);
 
-    return Scaffold(
-      appBar: const AppAppBar(title: 'Progress', centerTitle: false),
-      body: _body(state),
-    );
+    return Scaffold(body: _body(state));
   }
 
   Widget _body(StatisticsState state) {
@@ -218,7 +215,8 @@ class _ProgressCardState extends ConsumerState<_ProgressCard>
                 .read(statisticsProvider.notifier)
                 .metricSelected(ProgressMetric.values[index ?? 0]),
             tabs: [
-              for (final metric in ProgressMetric.values) Tab(text: metric.label),
+              for (final metric in ProgressMetric.values)
+                Tab(text: metric.label),
             ],
           ),
           AppSizes.defaultPadding.verticalSpace,

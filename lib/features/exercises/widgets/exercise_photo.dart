@@ -1,16 +1,20 @@
 import 'dart:io';
 
 import 'package:dream_gym/core/providers.dart';
+import 'package:dream_gym/features/exercises/domain/exercise_icon.dart';
+import 'package:dream_gym/features/exercises/widgets/exercise_icon_data.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
 
-/// An exercise's photo, or a placeholder where one would be.
+/// An exercise's photo, or its [icon] where there is none.
 ///
 /// Resolves the stored file name through [photoStoreProvider], so no screen
 /// has to know where the photo directory currently is.
 class ExercisePhoto extends ConsumerWidget {
   const ExercisePhoto({
     required this.photoFileName,
+    this.icon = ExerciseIcon.fallback,
+    this.iconColor,
     this.width = AppSizes.imageSize,
     this.height = AppSizes.imageSize,
     this.borderRadius = AppSizes.imageRadius,
@@ -21,6 +25,8 @@ class ExercisePhoto extends ConsumerWidget {
   /// temporary path, since it is not in the store yet.
   const ExercisePhoto.file(
     this.file, {
+    this.icon = ExerciseIcon.fallback,
+    this.iconColor,
     this.width = AppSizes.imageSize,
     this.height = AppSizes.imageSize,
     this.borderRadius = AppSizes.imageRadius,
@@ -29,13 +35,18 @@ class ExercisePhoto extends ConsumerWidget {
 
   final String? photoFileName;
   final File? file;
+  final ExerciseIcon icon;
+
+  /// The placeholder icon's color. Defaults to a muted gray.
+  final Color? iconColor;
+
   final double width;
   final double height;
   final double borderRadius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.appThemeColors;
+    final placeholderColor = iconColor ?? context.appThemeColors.gray300;
     final fileName = photoFileName;
     final image =
         file ??
@@ -49,15 +60,18 @@ class ExercisePhoto extends ConsumerWidget {
         width: width,
         height: height,
         child: image == null
-            ? _Placeholder(size: width, color: colors.gray300)
+            ? _Placeholder(icon: icon, size: width, color: placeholderColor)
             : Image.file(
                 image,
                 fit: BoxFit.cover,
                 // A file can go missing — a restored backup that brought the
                 // database but not the photos, say — and a broken image is not
                 // a reason to fail the whole list.
-                errorBuilder: (context, error, stackTrace) =>
-                    _Placeholder(size: width, color: colors.gray300),
+                errorBuilder: (context, error, stackTrace) => _Placeholder(
+                  icon: icon,
+                  size: width,
+                  color: placeholderColor,
+                ),
               ),
       ),
     );
@@ -65,8 +79,13 @@ class ExercisePhoto extends ConsumerWidget {
 }
 
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.size, required this.color});
+  const _Placeholder({
+    required this.icon,
+    required this.size,
+    required this.color,
+  });
 
+  final ExerciseIcon icon;
   final double size;
   final Color color;
 
@@ -76,7 +95,8 @@ class _Placeholder extends StatelessWidget {
       color: context.appThemeColors.surface2,
       child: Center(
         child: Icon(
-          Icons.fitness_center,
+          icon.data,
+          semanticLabel: icon.label,
           size: (size * 0.45).clamp(AppSizes.iconsSize16, AppSizes.padding45),
           color: color,
         ),

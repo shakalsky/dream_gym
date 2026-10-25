@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dream_gym/core/database/app_database.dart';
 import 'package:dream_gym/core/storage/photo_store.dart';
 import 'package:dream_gym/features/exercises/data/exercise_repository.dart';
+import 'package:dream_gym/features/exercises/domain/exercise_icon.dart';
 import 'package:dream_gym/features/training/data/training_repository.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +34,7 @@ void main() {
 
       expect(created.name, 'Bench press', reason: 'the name is trimmed');
       expect(created.photoFileName, isNull);
+      expect(created.icon, ExerciseIcon.fallback);
 
       await expectLater(
         repository.watchAll().first,
@@ -68,6 +70,47 @@ void main() {
       expect(photo.existsSync(), isTrue);
     });
 
+    test('saves the icon and changes it on update', () async {
+      final created = await repository.create(
+        name: 'Run',
+        icon: ExerciseIcon.running,
+      );
+      expect(
+        (await repository.watch(created.id).first)?.icon,
+        ExerciseIcon.running,
+      );
+
+      await repository.update(created.id, name: 'Run');
+      expect(
+        (await repository.watch(created.id).first)?.icon,
+        ExerciseIcon.running,
+        reason: 'no icon means leave it alone',
+      );
+
+      await repository.update(
+        created.id,
+        name: 'Run',
+        icon: ExerciseIcon.cycling,
+      );
+      expect(
+        (await repository.watch(created.id).first)?.icon,
+        ExerciseIcon.cycling,
+      );
+    });
+
+    test('an unknown stored icon reads as the default', () async {
+      final created = await repository.create(name: 'Bench');
+      await database.customStatement(
+        "UPDATE exercises SET icon_name = 'gone' WHERE id = ?",
+        [created.id],
+      );
+
+      expect(
+        (await repository.watch(created.id).first)?.icon,
+        ExerciseIcon.fallback,
+      );
+    });
+
     test('clears the photo when asked to', () async {
       final created = await repository.create(
         name: 'Bench',
@@ -95,14 +138,12 @@ void main() {
       await training.log(
         exerciseId: exercise.id,
         day: DateTime(2026, 8, 20),
-        sets: 4,
-        weightKg: 60,
+        sets: List.filled(4, (reps: 10, weightKg: 60)),
       );
       await training.log(
         exerciseId: other.id,
         day: DateTime(2026, 8, 20),
-        sets: 5,
-        weightKg: 100,
+        sets: List.filled(5, (reps: 5, weightKg: 100)),
       );
 
       await repository.delete(exercise.id);

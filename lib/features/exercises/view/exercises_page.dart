@@ -1,5 +1,5 @@
 import 'package:dream_gym/core/ui/empty_state.dart';
-import 'package:dream_gym/core/ui/icon_action.dart';
+import 'package:dream_gym/core/ui/kettlebell_border.dart';
 import 'package:dream_gym/features/exercises/providers/exercises_notifier.dart';
 import 'package:dream_gym/features/exercises/view/exercise_form_page.dart';
 import 'package:dream_gym/features/exercises/widgets/exercise_tile.dart';
@@ -25,17 +25,13 @@ class ExercisesPage extends ConsumerWidget {
 
     final state = ref.watch(exercisesProvider);
 
+    // The app bar lives in the home shell. The empty state brings its own
+    // add button, so the floating one waits until there is a list to sit on.
+    final showFab = state.status != ExercisesStatus.loading && !state.isEmpty;
+
     return Scaffold(
-      appBar: AppAppBar(
-        title: 'Exercises',
-        centerTitle: false,
-        action: IconAction(
-          icon: Icons.add,
-          tooltip: 'Add exercise',
-          onPressed: () => _addExercise(context),
-        ),
-      ),
       body: _body(context, state),
+      floatingActionButton: showFab ? const _AddExerciseButton() : null,
     );
   }
 
@@ -54,7 +50,7 @@ class ExercisesPage extends ConsumerWidget {
         action: AppPrimaryButton(
           text: 'Add exercise',
           buttonSize: PrimaryButtonSize.big,
-          onPressed: () => _addExercise(context),
+          onPressed: () => addExercise(context),
         ),
       );
     }
@@ -68,7 +64,8 @@ class ExercisesPage extends ConsumerWidget {
         AppSizes.defaultPadding,
         AppSizes.padding12,
         AppSizes.defaultPadding,
-        AppSizes.padding32,
+        // Room under the last tile so the floating button never covers it.
+        96,
       ),
       itemCount: state.logs.length,
       separatorBuilder: (context, index) => AppSizes.padding8.verticalSpace,
@@ -86,6 +83,71 @@ class ExercisesPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _addExercise(BuildContext context) =>
+  /// Opens the form for a new exercise.
+  static Future<void> addExercise(BuildContext context) =>
       Navigator.of(context).push<void>(ExerciseFormPage.route());
+}
+
+class _AddExerciseButton extends StatelessWidget {
+  const _AddExerciseButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appThemeColors;
+
+    const size = Size(50, 50 * KettlebellBorder.aspectRatio);
+    final foreground = Theme.of(context).colorScheme.onPrimary;
+
+    // Shaped like a kettlebell, with the "+" on its body. The ripple and the
+    // shadow follow the outline too.
+    return SizedBox.fromSize(
+      size: size,
+      child: FloatingActionButton(
+        tooltip: 'Add exercise',
+        shape: const KettlebellBorder(),
+        backgroundColor: colors.primary500,
+        foregroundColor: foreground,
+        elevation: 2,
+        onPressed: () => ExercisesPage.addExercise(context),
+        child: CustomPaint(
+          size: size,
+          painter: _PlusPainter(color: foreground),
+        ),
+      ),
+    );
+  }
+}
+
+/// A chunky, round-ended "+" on the kettlebell's body. Drawn rather than
+/// taken from the icon font, whose "+" is too thin to read at this size.
+class _PlusPainter extends CustomPainter {
+  const _PlusPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = KettlebellBorder.bodyCenter(Offset.zero & size);
+    final thickness = size.width * 0.12;
+    final reach = (size.width * 0.34 - thickness) / 2;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = thickness
+      ..strokeCap = StrokeCap.round;
+
+    canvas
+      ..drawLine(
+        center - Offset(reach, 0),
+        center + Offset(reach, 0),
+        paint,
+      )
+      ..drawLine(
+        center - Offset(0, reach),
+        center + Offset(0, reach),
+        paint,
+      );
+  }
+
+  @override
+  bool shouldRepaint(_PlusPainter oldDelegate) => oldDelegate.color != color;
 }

@@ -39,9 +39,12 @@ String formatKilograms(double kilograms) {
       : rounded.toString();
 }
 
-/// How a logged entry reads on one line: '4 × 60 kg'.
-String formatSetsByWeight(int sets, double kilograms) =>
-    '$sets × ${formatWeight(kilograms)}';
+/// How a logged entry reads on one line: '4 × 10 @ 60 kg', or '4 × 60 kg'
+/// when the reps are not known.
+String formatSetsByWeight(int sets, double kilograms, {int? reps}) =>
+    reps == null
+    ? '$sets × ${formatWeight(kilograms)}'
+    : '$sets × $reps @ ${formatWeight(kilograms)}';
 
 /// '1 set' / '4 sets'.
 String formatSets(int sets) => sets == 1 ? '1 set' : '$sets sets';
@@ -65,9 +68,7 @@ String formatDay(DateTime day, {required DateTime today}) {
 /// '12 Aug', or '12 Aug 2025' when the year cannot be assumed.
 String formatDate(DateTime day, {bool withYear = false}) {
   final month = _monthNames[day.month - 1];
-  return withYear
-      ? '${day.day} $month ${day.year}'
-      : '${day.day} $month';
+  return withYear ? '${day.day} $month ${day.year}' : '${day.day} $month';
 }
 
 /// The date part of [dateTime], at local midnight.

@@ -31,7 +31,11 @@ class ExerciseTile extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          ExercisePhoto(photoFileName: log.exercise.photoFileName),
+          ExercisePhoto(
+            photoFileName: log.exercise.photoFileName,
+            icon: log.exercise.icon,
+            iconColor: colors.primary500,
+          ),
           AppSizes.padding12.horizontalSpace,
           Expanded(
             child: Column(
@@ -50,7 +54,7 @@ class ExerciseTile extends StatelessWidget {
                 Text(
                   latest == null
                       ? 'Not trained yet'
-                      : '${formatSetsByWeight(latest.sets, latest.heaviestWeightKg)}'
+                      : '${formatSetsByWeight(latest.sets, latest.heaviestWeightKg, reps: latest.reps)}'
                             ' · ${formatDay(latest.day, today: today)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

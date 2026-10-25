@@ -42,6 +42,17 @@ class $ExercisesTable extends Exercises
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _iconNameMeta = const VerificationMeta(
+    'iconName',
+  );
+  @override
+  late final GeneratedColumn<String> iconName = GeneratedColumn<String>(
+    'icon_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -54,7 +65,13 @@ class $ExercisesTable extends Exercises
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, photoFileName, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    photoFileName,
+    iconName,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -89,6 +106,12 @@ class $ExercisesTable extends Exercises
         ),
       );
     }
+    if (data.containsKey('icon_name')) {
+      context.handle(
+        _iconNameMeta,
+        iconName.isAcceptableOrUnknown(data['icon_name']!, _iconNameMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -118,6 +141,10 @@ class $ExercisesTable extends Exercises
         DriftSqlType.string,
         data['${effectivePrefix}photo_file_name'],
       ),
+      iconName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon_name'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -146,11 +173,16 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
   /// iOS updates, so an absolute path stored here would eventually point at
   /// nothing. See `PhotoStore`.
   final String? photoFileName;
+
+  /// `ExerciseIcon.name`. Null for exercises from before icons existed, which
+  /// read as the default icon.
+  final String? iconName;
   final DateTime createdAt;
   const ExerciseRow({
     required this.id,
     required this.name,
     this.photoFileName,
+    this.iconName,
     required this.createdAt,
   });
   @override
@@ -160,6 +192,9 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || photoFileName != null) {
       map['photo_file_name'] = Variable<String>(photoFileName);
+    }
+    if (!nullToAbsent || iconName != null) {
+      map['icon_name'] = Variable<String>(iconName);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -172,6 +207,9 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
       photoFileName: photoFileName == null && nullToAbsent
           ? const Value.absent()
           : Value(photoFileName),
+      iconName: iconName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconName),
       createdAt: Value(createdAt),
     );
   }
@@ -185,6 +223,7 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       photoFileName: serializer.fromJson<String?>(json['photoFileName']),
+      iconName: serializer.fromJson<String?>(json['iconName']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -195,6 +234,7 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'photoFileName': serializer.toJson<String?>(photoFileName),
+      'iconName': serializer.toJson<String?>(iconName),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -203,6 +243,7 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
     String? id,
     String? name,
     Value<String?> photoFileName = const Value.absent(),
+    Value<String?> iconName = const Value.absent(),
     DateTime? createdAt,
   }) => ExerciseRow(
     id: id ?? this.id,
@@ -210,6 +251,7 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
     photoFileName: photoFileName.present
         ? photoFileName.value
         : this.photoFileName,
+    iconName: iconName.present ? iconName.value : this.iconName,
     createdAt: createdAt ?? this.createdAt,
   );
   ExerciseRow copyWithCompanion(ExercisesCompanion data) {
@@ -219,6 +261,7 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
       photoFileName: data.photoFileName.present
           ? data.photoFileName.value
           : this.photoFileName,
+      iconName: data.iconName.present ? data.iconName.value : this.iconName,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -229,13 +272,14 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('photoFileName: $photoFileName, ')
+          ..write('iconName: $iconName, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, photoFileName, createdAt);
+  int get hashCode => Object.hash(id, name, photoFileName, iconName, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -243,6 +287,7 @@ class ExerciseRow extends DataClass implements Insertable<ExerciseRow> {
           other.id == this.id &&
           other.name == this.name &&
           other.photoFileName == this.photoFileName &&
+          other.iconName == this.iconName &&
           other.createdAt == this.createdAt);
 }
 
@@ -250,12 +295,14 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
   final Value<String> id;
   final Value<String> name;
   final Value<String?> photoFileName;
+  final Value<String?> iconName;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const ExercisesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.photoFileName = const Value.absent(),
+    this.iconName = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -263,6 +310,7 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
     required String id,
     required String name,
     this.photoFileName = const Value.absent(),
+    this.iconName = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -272,6 +320,7 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? photoFileName,
+    Expression<String>? iconName,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -279,6 +328,7 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (photoFileName != null) 'photo_file_name': photoFileName,
+      if (iconName != null) 'icon_name': iconName,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -288,6 +338,7 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
     Value<String>? id,
     Value<String>? name,
     Value<String?>? photoFileName,
+    Value<String?>? iconName,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -295,6 +346,7 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
       id: id ?? this.id,
       name: name ?? this.name,
       photoFileName: photoFileName ?? this.photoFileName,
+      iconName: iconName ?? this.iconName,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -312,6 +364,9 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
     if (photoFileName.present) {
       map['photo_file_name'] = Variable<String>(photoFileName.value);
     }
+    if (iconName.present) {
+      map['icon_name'] = Variable<String>(iconName.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -327,6 +382,7 @@ class ExercisesCompanion extends UpdateCompanion<ExerciseRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('photoFileName: $photoFileName, ')
+          ..write('iconName: $iconName, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -383,6 +439,15 @@ class $TrainingEntriesTable extends TrainingEntries
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _repsMeta = const VerificationMeta('reps');
+  @override
+  late final GeneratedColumn<int> reps = GeneratedColumn<int>(
+    'reps',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _weightKgMeta = const VerificationMeta(
     'weightKg',
   );
@@ -411,6 +476,7 @@ class $TrainingEntriesTable extends TrainingEntries
     exerciseId,
     performedOn,
     sets,
+    reps,
     weightKg,
     createdAt,
   ];
@@ -458,6 +524,12 @@ class $TrainingEntriesTable extends TrainingEntries
     } else if (isInserting) {
       context.missing(_setsMeta);
     }
+    if (data.containsKey('reps')) {
+      context.handle(
+        _repsMeta,
+        reps.isAcceptableOrUnknown(data['reps']!, _repsMeta),
+      );
+    }
     if (data.containsKey('weight_kg')) {
       context.handle(
         _weightKgMeta,
@@ -499,6 +571,10 @@ class $TrainingEntriesTable extends TrainingEntries
         DriftSqlType.int,
         data['${effectivePrefix}sets'],
       )!,
+      reps: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reps'],
+      ),
       weightKg: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}weight_kg'],
@@ -534,6 +610,10 @@ class TrainingEntryRow extends DataClass
   /// it is what lets several entries collapse into one session.
   final DateTime performedOn;
   final int sets;
+
+  /// Repetitions in each of [sets]. Null for entries written before reps
+  /// were recorded.
+  final int? reps;
   final double weightKg;
 
   /// When the row was written, as opposed to the day it describes. Keeps
@@ -544,6 +624,7 @@ class TrainingEntryRow extends DataClass
     required this.exerciseId,
     required this.performedOn,
     required this.sets,
+    this.reps,
     required this.weightKg,
     required this.createdAt,
   });
@@ -554,6 +635,9 @@ class TrainingEntryRow extends DataClass
     map['exercise_id'] = Variable<String>(exerciseId);
     map['performed_on'] = Variable<DateTime>(performedOn);
     map['sets'] = Variable<int>(sets);
+    if (!nullToAbsent || reps != null) {
+      map['reps'] = Variable<int>(reps);
+    }
     map['weight_kg'] = Variable<double>(weightKg);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -565,6 +649,7 @@ class TrainingEntryRow extends DataClass
       exerciseId: Value(exerciseId),
       performedOn: Value(performedOn),
       sets: Value(sets),
+      reps: reps == null && nullToAbsent ? const Value.absent() : Value(reps),
       weightKg: Value(weightKg),
       createdAt: Value(createdAt),
     );
@@ -580,6 +665,7 @@ class TrainingEntryRow extends DataClass
       exerciseId: serializer.fromJson<String>(json['exerciseId']),
       performedOn: serializer.fromJson<DateTime>(json['performedOn']),
       sets: serializer.fromJson<int>(json['sets']),
+      reps: serializer.fromJson<int?>(json['reps']),
       weightKg: serializer.fromJson<double>(json['weightKg']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -592,6 +678,7 @@ class TrainingEntryRow extends DataClass
       'exerciseId': serializer.toJson<String>(exerciseId),
       'performedOn': serializer.toJson<DateTime>(performedOn),
       'sets': serializer.toJson<int>(sets),
+      'reps': serializer.toJson<int?>(reps),
       'weightKg': serializer.toJson<double>(weightKg),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -602,6 +689,7 @@ class TrainingEntryRow extends DataClass
     String? exerciseId,
     DateTime? performedOn,
     int? sets,
+    Value<int?> reps = const Value.absent(),
     double? weightKg,
     DateTime? createdAt,
   }) => TrainingEntryRow(
@@ -609,6 +697,7 @@ class TrainingEntryRow extends DataClass
     exerciseId: exerciseId ?? this.exerciseId,
     performedOn: performedOn ?? this.performedOn,
     sets: sets ?? this.sets,
+    reps: reps.present ? reps.value : this.reps,
     weightKg: weightKg ?? this.weightKg,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -622,6 +711,7 @@ class TrainingEntryRow extends DataClass
           ? data.performedOn.value
           : this.performedOn,
       sets: data.sets.present ? data.sets.value : this.sets,
+      reps: data.reps.present ? data.reps.value : this.reps,
       weightKg: data.weightKg.present ? data.weightKg.value : this.weightKg,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -634,6 +724,7 @@ class TrainingEntryRow extends DataClass
           ..write('exerciseId: $exerciseId, ')
           ..write('performedOn: $performedOn, ')
           ..write('sets: $sets, ')
+          ..write('reps: $reps, ')
           ..write('weightKg: $weightKg, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -642,7 +733,7 @@ class TrainingEntryRow extends DataClass
 
   @override
   int get hashCode =>
-      Object.hash(id, exerciseId, performedOn, sets, weightKg, createdAt);
+      Object.hash(id, exerciseId, performedOn, sets, reps, weightKg, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -651,6 +742,7 @@ class TrainingEntryRow extends DataClass
           other.exerciseId == this.exerciseId &&
           other.performedOn == this.performedOn &&
           other.sets == this.sets &&
+          other.reps == this.reps &&
           other.weightKg == this.weightKg &&
           other.createdAt == this.createdAt);
 }
@@ -660,6 +752,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
   final Value<String> exerciseId;
   final Value<DateTime> performedOn;
   final Value<int> sets;
+  final Value<int?> reps;
   final Value<double> weightKg;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -668,6 +761,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
     this.exerciseId = const Value.absent(),
     this.performedOn = const Value.absent(),
     this.sets = const Value.absent(),
+    this.reps = const Value.absent(),
     this.weightKg = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -677,6 +771,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
     required String exerciseId,
     required DateTime performedOn,
     required int sets,
+    this.reps = const Value.absent(),
     required double weightKg,
     required DateTime createdAt,
     this.rowid = const Value.absent(),
@@ -691,6 +786,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
     Expression<String>? exerciseId,
     Expression<DateTime>? performedOn,
     Expression<int>? sets,
+    Expression<int>? reps,
     Expression<double>? weightKg,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -700,6 +796,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
       if (exerciseId != null) 'exercise_id': exerciseId,
       if (performedOn != null) 'performed_on': performedOn,
       if (sets != null) 'sets': sets,
+      if (reps != null) 'reps': reps,
       if (weightKg != null) 'weight_kg': weightKg,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -711,6 +808,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
     Value<String>? exerciseId,
     Value<DateTime>? performedOn,
     Value<int>? sets,
+    Value<int?>? reps,
     Value<double>? weightKg,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -720,6 +818,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
       exerciseId: exerciseId ?? this.exerciseId,
       performedOn: performedOn ?? this.performedOn,
       sets: sets ?? this.sets,
+      reps: reps ?? this.reps,
       weightKg: weightKg ?? this.weightKg,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -741,6 +840,9 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
     if (sets.present) {
       map['sets'] = Variable<int>(sets.value);
     }
+    if (reps.present) {
+      map['reps'] = Variable<int>(reps.value);
+    }
     if (weightKg.present) {
       map['weight_kg'] = Variable<double>(weightKg.value);
     }
@@ -760,6 +862,7 @@ class TrainingEntriesCompanion extends UpdateCompanion<TrainingEntryRow> {
           ..write('exerciseId: $exerciseId, ')
           ..write('performedOn: $performedOn, ')
           ..write('sets: $sets, ')
+          ..write('reps: $reps, ')
           ..write('weightKg: $weightKg, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -1235,6 +1338,7 @@ typedef $$ExercisesTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<String?> photoFileName,
+      Value<String?> iconName,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -1243,6 +1347,7 @@ typedef $$ExercisesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String?> photoFileName,
+      Value<String?> iconName,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -1293,6 +1398,11 @@ class $$ExercisesTableFilterComposer
 
   ColumnFilters<String> get photoFileName => $composableBuilder(
     column: $table.photoFileName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get iconName => $composableBuilder(
+    column: $table.iconName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1351,6 +1461,11 @@ class $$ExercisesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get iconName => $composableBuilder(
+    column: $table.iconName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1376,6 +1491,9 @@ class $$ExercisesTableAnnotationComposer
     column: $table.photoFileName,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get iconName =>
+      $composableBuilder(column: $table.iconName, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1437,12 +1555,14 @@ class $$ExercisesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> photoFileName = const Value.absent(),
+                Value<String?> iconName = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExercisesCompanion(
                 id: id,
                 name: name,
                 photoFileName: photoFileName,
+                iconName: iconName,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -1451,12 +1571,14 @@ class $$ExercisesTableTableManager
                 required String id,
                 required String name,
                 Value<String?> photoFileName = const Value.absent(),
+                Value<String?> iconName = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => ExercisesCompanion.insert(
                 id: id,
                 name: name,
                 photoFileName: photoFileName,
+                iconName: iconName,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -1524,6 +1646,7 @@ typedef $$TrainingEntriesTableCreateCompanionBuilder =
       required String exerciseId,
       required DateTime performedOn,
       required int sets,
+      Value<int?> reps,
       required double weightKg,
       required DateTime createdAt,
       Value<int> rowid,
@@ -1534,6 +1657,7 @@ typedef $$TrainingEntriesTableUpdateCompanionBuilder =
       Value<String> exerciseId,
       Value<DateTime> performedOn,
       Value<int> sets,
+      Value<int?> reps,
       Value<double> weightKg,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -1587,6 +1711,11 @@ class $$TrainingEntriesTableFilterComposer
 
   ColumnFilters<int> get sets => $composableBuilder(
     column: $table.sets,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reps => $composableBuilder(
+    column: $table.reps,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1648,6 +1777,11 @@ class $$TrainingEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get reps => $composableBuilder(
+    column: $table.reps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get weightKg => $composableBuilder(
     column: $table.weightKg,
     builder: (column) => ColumnOrderings(column),
@@ -1701,6 +1835,9 @@ class $$TrainingEntriesTableAnnotationComposer
 
   GeneratedColumn<int> get sets =>
       $composableBuilder(column: $table.sets, builder: (column) => column);
+
+  GeneratedColumn<int> get reps =>
+      $composableBuilder(column: $table.reps, builder: (column) => column);
 
   GeneratedColumn<double> get weightKg =>
       $composableBuilder(column: $table.weightKg, builder: (column) => column);
@@ -1766,6 +1903,7 @@ class $$TrainingEntriesTableTableManager
                 Value<String> exerciseId = const Value.absent(),
                 Value<DateTime> performedOn = const Value.absent(),
                 Value<int> sets = const Value.absent(),
+                Value<int?> reps = const Value.absent(),
                 Value<double> weightKg = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1774,6 +1912,7 @@ class $$TrainingEntriesTableTableManager
                 exerciseId: exerciseId,
                 performedOn: performedOn,
                 sets: sets,
+                reps: reps,
                 weightKg: weightKg,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -1784,6 +1923,7 @@ class $$TrainingEntriesTableTableManager
                 required String exerciseId,
                 required DateTime performedOn,
                 required int sets,
+                Value<int?> reps = const Value.absent(),
                 required double weightKg,
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
@@ -1792,6 +1932,7 @@ class $$TrainingEntriesTableTableManager
                 exerciseId: exerciseId,
                 performedOn: performedOn,
                 sets: sets,
+                reps: reps,
                 weightKg: weightKg,
                 createdAt: createdAt,
                 rowid: rowid,

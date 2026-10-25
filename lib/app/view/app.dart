@@ -1,3 +1,4 @@
+import 'package:dream_gym/core/theme/dream_gym_theme.dart';
 import 'package:dream_gym/env/app_env.dart';
 import 'package:dream_gym/features/settings/providers/settings_notifier.dart';
 import 'package:dream_gym/home/view/home_page.dart';
@@ -25,8 +26,8 @@ class App extends ConsumerWidget {
 
     return MaterialApp(
       title: env.appName,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: DreamGymTheme.light,
+      darkTheme: DreamGymTheme.dark,
       themeMode: themeMode,
       // A dev build in release mode has no checked-mode banner of its own, and
       // that is exactly the build most easily mistaken for production.

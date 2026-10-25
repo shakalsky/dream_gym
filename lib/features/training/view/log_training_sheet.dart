@@ -1,8 +1,8 @@
 import 'package:dream_gym/core/format/training_format.dart';
 import 'package:dream_gym/core/providers.dart';
+import 'package:dream_gym/core/ui/wheel_picker.dart';
 import 'package:dream_gym/features/training/domain/exercise_progress.dart';
 import 'package:dream_gym/features/training/providers/log_training_notifier.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_calm_ui_package/my_calm_ui_package.dart';
 
@@ -59,16 +59,6 @@ class _LogTrainingSheetState extends ConsumerState<LogTrainingSheet> {
     lastSession: widget.lastSession,
   ));
 
-  late final TextEditingController _weight = TextEditingController(
-    text: ref.read(_form).weightText,
-  );
-
-  @override
-  void dispose() {
-    _weight.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen(_form, (previous, next) {
@@ -90,23 +80,26 @@ class _LogTrainingSheetState extends ConsumerState<LogTrainingSheet> {
         bottom:
             MediaQuery.viewInsetsOf(context).bottom + AppSizes.defaultPadding,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextHeading.small(
-            text: 'Add result',
-            subtitle: widget.exerciseName,
-          ),
-          AppSizes.padding20.verticalSpace,
-          _DayPicker(form: _form),
-          AppSizes.padding20.verticalSpace,
-          _SetsStepper(form: _form),
-          AppSizes.padding20.verticalSpace,
-          _WeightField(form: _form, controller: _weight),
-          AppSizes.padding24.verticalSpace,
-          _SaveButton(form: _form),
-        ],
+      // Scrolls once a row per set no longer fits above the keyboard.
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextHeading.small(
+              text: 'Add result',
+              subtitle: widget.exerciseName,
+            ),
+            AppSizes.padding20.verticalSpace,
+            _DayPicker(form: _form),
+            AppSizes.padding20.verticalSpace,
+            _SetsStepper(form: _form),
+            AppSizes.padding20.verticalSpace,
+            _SetDetails(form: _form),
+            AppSizes.padding24.verticalSpace,
+            _SaveButton(form: _form),
+          ],
+        ),
       ),
     );
   }
@@ -218,16 +211,41 @@ class _SetsStepper extends ConsumerWidget {
             _StepButton(
               icon: Icons.remove,
               semanticLabel: 'One set fewer',
-              onPressed: sets > 1
-                  ? () => notifier.setsChanged(sets - 1)
-                  : null,
+              onPressed: sets > 1 ? () => notifier.setsChanged(sets - 1) : null,
             ),
-            SizedBox(
-              width: 72,
-              child: Center(
-                child: Text(
-                  '$sets',
-                  style: context.appFonts.headlineSmall,
+            // The buttons are for one more or one fewer; the count itself
+            // opens the wheel, for jumping straight to it.
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.padding8,
+              ),
+              child: Semantics(
+                button: true,
+                label: '$sets sets. Choose the number of sets',
+                excludeSemantics: true,
+                child: Material(
+                  color: context.appThemeColors.surface1,
+                  borderRadius: BorderRadius.circular(
+                    AppSizes.mediumButtonRadius,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(
+                      AppSizes.mediumButtonRadius,
+                    ),
+                    onTap: () => _pickSets(context, notifier, sets),
+                    child: SizedBox(
+                      width: 72,
+                      height: 48,
+                      child: Center(
+                        child: Text(
+                          '$sets',
+                          style: context.appFonts.headlineSmall?.copyWith(
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -241,6 +259,28 @@ class _SetsStepper extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+
+  static Future<void> _pickSets(
+    BuildContext context,
+    LogTrainingNotifier notifier,
+    int sets,
+  ) {
+    return showWheelPickerSheet(
+      context,
+      title: 'Sets',
+      picker: WheelPicker(
+        suffix: 'sets',
+        columns: [
+          WheelColumn(
+            itemCount: LogTrainingNotifier.maxSets,
+            initialIndex: sets - 1,
+            labelOf: (index) => '${index + 1}',
+            onChanged: (index) => notifier.setsChanged(index + 1),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -285,43 +325,306 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-class _WeightField extends ConsumerWidget {
-  const _WeightField({required this.form, required this.controller});
+/// One reps-and-weight for every set, or — with the switch off — one per set,
+/// for pyramids, drop sets and the last set that came up short.
+class _SetDetails extends ConsumerWidget {
+  const _SetDetails({required this.form});
 
   final _FormProvider form;
-  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(form.notifier);
+    final same = ref.watch(form.select((state) => state.sameForEverySet));
+    final sets = ref.watch(form.select((state) => state.sets));
     final isSaving = ref.watch(form.select((state) => state.isSaving));
 
-    return AppInput.gray(
-      controller: controller,
-      label: 'Weight per set',
-      isImportant: true,
-      placeholder: '60',
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        // Digits and one separator, either kind — a gym floor is no place to
-        // discover that your keyboard's comma is not accepted.
-        FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-      ],
-      textInputAction: TextInputAction.done,
-      enabled: !isSaving,
-      suffixIcon: Padding(
-        padding: const EdgeInsets.only(right: AppSizes.padding12),
-        child: Center(
-          child: Text(
-            'kg',
-            style: context.appFonts.bodyMedium?.copyWith(
-              color: context.appThemeColors.gray500,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        MergeSemantics(
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Same reps and weight for every set',
+                  style: context.appFonts.bodyMedium?.copyWith(
+                    color: context.appThemeColors.gray800,
+                  ),
+                ),
+              ),
+              AppToggle(
+                value: same,
+                onChanged: isSaving
+                    ? null
+                    : (value) => notifier.sameForEverySetChanged(same: value),
+              ),
+            ],
+          ),
+        ),
+        AppSizes.padding12.verticalSpace,
+        if (same) ...[
+          _WheelField.reps(
+            label: 'Reps per set',
+            pickerTitle: 'Reps per set',
+            text: ref.watch(form.select((state) => state.repsText)),
+            enabled: !isSaving,
+            onChanged: notifier.repsChanged,
+          ),
+          AppSizes.padding20.verticalSpace,
+          _WheelField.weight(
+            label: 'Weight per set',
+            pickerTitle: 'Weight per set',
+            text: ref.watch(form.select((state) => state.weightText)),
+            enabled: !isSaving,
+            onChanged: notifier.weightChanged,
+          ),
+        ] else
+          for (var i = 0; i < sets; i++) ...[
+            if (i > 0) AppSizes.padding12.verticalSpace,
+            _FieldLabel('Set ${i + 1}'),
+            AppSizes.padding8.verticalSpace,
+            Row(
+              spacing: AppSizes.padding12,
+              children: [
+                Expanded(
+                  child: _WheelField.reps(
+                    pickerTitle: 'Set ${i + 1} reps',
+                    text: ref.watch(
+                      form.select((state) => state.setRepsTexts[i]),
+                    ),
+                    enabled: !isSaving,
+                    onChanged: (value) => notifier.setRepsChanged(i, value),
+                  ),
+                ),
+                Expanded(
+                  child: _WheelField.weight(
+                    pickerTitle: 'Set ${i + 1} weight',
+                    text: ref.watch(
+                      form.select((state) => state.setWeightTexts[i]),
+                    ),
+                    enabled: !isSaving,
+                    onChanged: (value) => notifier.setWeightChanged(i, value),
+                  ),
+                ),
+              ],
             ),
+          ],
+      ],
+    );
+  }
+}
+
+/// The unit, shown at the trailing edge inside a field.
+class _UnitSuffix extends StatelessWidget {
+  const _UnitSuffix(this.unit);
+
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSizes.padding12),
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          unit,
+          style: context.appFonts.bodyMedium?.copyWith(
+            color: context.appThemeColors.gray500,
           ),
         ),
       ),
-      onChanged: notifier.weightChanged,
-      onFieldSubmitted: (_) => notifier.save(),
+    );
+  }
+}
+
+/// The columns of a field's wheel, and the value they open on.
+typedef _Wheel = ({String initial, List<WheelColumn> columns});
+
+/// A number picked on a wheel rather than typed: reps or a weight.
+///
+/// Looks like any other input, but is read-only: a tap opens the wheel, which
+/// writes every step straight to the form.
+class _WheelField extends StatefulWidget {
+  /// Whole reps, 1 to 100, on one wheel.
+  const _WheelField.reps({
+    required this.pickerTitle,
+    required this.text,
+    required this.enabled,
+    required this.onChanged,
+    this.label,
+  }) : unit = 'reps',
+       placeholder = '10',
+       wheelFor = _repsWheel;
+
+  /// Kilograms on two wheels: whole kilograms from 0 to 500 plus a few
+  /// assistance settings below zero, and a half or not — the same precision
+  /// the app shows weights in everywhere else.
+  const _WheelField.weight({
+    required this.pickerTitle,
+    required this.text,
+    required this.enabled,
+    required this.onChanged,
+    this.label,
+  }) : unit = 'kg',
+       placeholder = '60',
+       wheelFor = _weightWheel;
+
+  static const _maxReps = 100;
+  static const _defaultReps = 10;
+  static const _maxKg = 500;
+
+  /// Below zero is assistance, as on an assisted pull-up machine. Any
+  /// negative weight is valid, but the wheel offers only these for now.
+  static const _assistKg = [-22, -16, -11, -7];
+  static const _defaultKg = 60.0;
+
+  /// Every whole kilogram the wheel offers, top to bottom.
+  static final List<int> _wholeKg = [
+    ..._assistKg,
+    for (var kg = 0; kg <= _maxKg; kg++) kg,
+  ];
+
+  final String pickerTitle;
+
+  /// The form's current text for this value.
+  final String text;
+  final String? label;
+  final bool enabled;
+  final ValueChanged<String> onChanged;
+
+  final String unit;
+
+  /// Shown while empty; also where the wheel starts.
+  final String placeholder;
+
+  /// Builds the wheel for the form's [text], reporting each step's new text.
+  final _Wheel Function(String text, ValueChanged<String> onChanged) wheelFor;
+
+  static _Wheel _repsWheel(String text, ValueChanged<String> onChanged) {
+    final reps = (LogTrainingState.parseReps(text) ?? _defaultReps).clamp(
+      1,
+      _maxReps,
+    );
+
+    return (
+      initial: '$reps',
+      columns: [
+        WheelColumn(
+          itemCount: _maxReps,
+          initialIndex: reps - 1,
+          labelOf: (index) => '${index + 1}',
+          onChanged: (index) => onChanged('${index + 1}'),
+        ),
+      ],
+    );
+  }
+
+  static _Wheel _weightWheel(String text, ValueChanged<String> onChanged) {
+    final kg = LogTrainingState.parseWeight(text) ?? _defaultKg;
+    int whole;
+    bool half;
+    if (kg < 0) {
+      // Snapped to the closest assistance setting the wheel offers.
+      whole = _assistKg.reduce(
+        (a, b) => (a - kg).abs() <= (b - kg).abs() ? a : b,
+      );
+      half = false;
+    } else {
+      // Snapped to the nearest half, which is what the decimal wheel offers.
+      final halves = (kg * 2).round().clamp(0, _maxKg * 2);
+      whole = halves ~/ 2;
+      half = halves.isOdd;
+    }
+
+    // Assistance settings are whole kilograms, so the half only counts at
+    // zero and above.
+    String current() => formatKilograms(whole + (half && whole >= 0 ? .5 : 0));
+
+    return (
+      initial: current(),
+      columns: [
+        WheelColumn(
+          itemCount: _wholeKg.length,
+          initialIndex: _wholeKg.indexOf(whole),
+          labelOf: (index) =>
+              _wholeKg[index] == 0 ? 'body weight' : '${_wholeKg[index]}',
+          // Wide enough for 'body weight'.
+          width: 150,
+          alignment: Alignment.centerRight,
+          onChanged: (index) {
+            whole = _wholeKg[index];
+            onChanged(current());
+          },
+        ),
+        WheelColumn(
+          itemCount: 2,
+          initialIndex: half ? 1 : 0,
+          labelOf: (index) => index == 0 ? '.0' : '.5',
+          width: 56,
+          alignment: Alignment.centerLeft,
+          onChanged: (index) {
+            half = index == 1;
+            onChanged(current());
+          },
+        ),
+      ],
+    );
+  }
+
+  @override
+  State<_WheelField> createState() => _WheelFieldState();
+}
+
+class _WheelFieldState extends State<_WheelField> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.text,
+  );
+
+  @override
+  void didUpdateWidget(_WheelField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The form is the source of truth; the field only mirrors it.
+    if (widget.text != _controller.text) _controller.text = widget.text;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pick() async {
+    final field = widget;
+    final wheel = field.wheelFor(field.text, field.onChanged);
+
+    // Opening the wheel is choosing a value, so the one it opens on counts
+    // even if it is never turned.
+    field.onChanged(wheel.initial);
+
+    await showWheelPickerSheet(
+      context,
+      title: field.pickerTitle,
+      picker: WheelPicker(suffix: field.unit, columns: wheel.columns),
+    );
+
+    if (mounted) FocusScope.of(context).unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = widget.label;
+
+    return AppInput.gray(
+      controller: _controller,
+      label: label,
+      isImportant: label != null,
+      placeholder: widget.placeholder,
+      readOnly: true,
+      enabled: widget.enabled,
+      showClearButton: false,
+      suffixIcon: _UnitSuffix(widget.unit),
+      onTap: widget.enabled ? _pick : null,
     );
   }
 }
@@ -334,18 +637,27 @@ class _SaveButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(form);
-    final weightKg = state.weightKg;
 
     return SizedBox(
       width: double.infinity,
       child: AppPrimaryButton(
-        text: weightKg == null
-            ? 'Save'
-            : 'Save ${formatSetsByWeight(state.sets, weightKg)}',
+        text: _label(state),
         buttonSize: PrimaryButtonSize.big,
         isLoading: state.isSaving,
         onPressed: state.canSave ? ref.read(form.notifier).save : null,
       ),
     );
+  }
+
+  /// What is about to be saved: 'Save 3 × 10 @ 60 kg', or 'Save 3 sets' when
+  /// the sets differ.
+  static String _label(LogTrainingState state) {
+    final sets = state.setResults;
+    if (sets == null) return 'Save';
+
+    final first = sets.first;
+    return sets.every((set) => set == first)
+        ? 'Save ${formatSetsByWeight(sets.length, first.weightKg, reps: first.reps)}'
+        : 'Save ${formatSets(sets.length)}';
   }
 }

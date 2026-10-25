@@ -70,7 +70,11 @@ class SessionCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    formatSetsByWeight(entry.sets, entry.weightKg),
+                    formatSetsByWeight(
+                      entry.sets,
+                      entry.weightKg,
+                      reps: entry.reps,
+                    ),
                     style: context.appFonts.bodyLarge?.copyWith(
                       color: colors.gray800,
                     ),

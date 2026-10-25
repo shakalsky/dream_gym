@@ -14,7 +14,6 @@ class EnvironmentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(env.appName)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),

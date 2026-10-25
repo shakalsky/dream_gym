@@ -3,6 +3,7 @@ import 'package:dream_gym/core/ids/uuid.dart';
 import 'package:dream_gym/core/providers.dart';
 import 'package:dream_gym/core/storage/photo_store.dart';
 import 'package:dream_gym/features/exercises/domain/exercise.dart';
+import 'package:dream_gym/features/exercises/domain/exercise_icon.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,9 +19,11 @@ final exerciseRepositoryProvider = Provider<ExerciseRepository>(
 /// Hands out [Exercise], not drift rows: the screens stay unaware of which
 /// database is underneath, which is the point of the local-first-then-sync plan.
 class ExerciseRepository {
-  ExerciseRepository({required AppDatabase database, required PhotoStore photos})
-    : _database = database,
-      _photos = photos;
+  ExerciseRepository({
+    required AppDatabase database,
+    required PhotoStore photos,
+  }) : _database = database,
+       _photos = photos;
 
   final AppDatabase _database;
   final PhotoStore _photos;
@@ -47,10 +50,15 @@ class ExerciseRepository {
   }
 
   /// Adds an exercise and returns it.
-  Future<Exercise> create({required String name, String? photoFileName}) async {
+  Future<Exercise> create({
+    required String name,
+    ExerciseIcon icon = ExerciseIcon.fallback,
+    String? photoFileName,
+  }) async {
     final exercise = Exercise(
       id: newUuid(),
       name: name.trim(),
+      icon: icon,
       photoFileName: photoFileName,
       // Not rounded to whole seconds. A date-time column holds ISO-8601 text
       // (see `build.yaml`), which round-trips microseconds exactly, so the
@@ -64,6 +72,7 @@ class ExerciseRepository {
           ExercisesCompanion.insert(
             id: exercise.id,
             name: exercise.name,
+            iconName: Value(exercise.icon.name),
             photoFileName: Value(exercise.photoFileName),
             createdAt: exercise.createdAt,
           ),
@@ -72,20 +81,26 @@ class ExerciseRepository {
     return exercise;
   }
 
-  /// Renames an exercise and/or points it at a different photo.
+  /// Renames an exercise, and/or changes its icon or photo.
   ///
-  /// [photoFileName] is passed as a [Value] so that 'leave the photo alone'
-  /// and 'the exercise now has no photo' stay distinguishable.
+  /// A null [icon] leaves the icon as it is. [photoFileName] is passed as a
+  /// [Value] so that 'leave the photo alone' and 'the exercise now has no
+  /// photo' stay distinguishable.
   Future<void> update(
     String id, {
     required String name,
+    ExerciseIcon? icon,
     Value<String?> photoFileName = const Value.absent(),
   }) async {
     final statement = _database.update(_database.exercises)
       ..where((exercise) => exercise.id.equals(id));
 
     await statement.write(
-      ExercisesCompanion(name: Value(name.trim()), photoFileName: photoFileName),
+      ExercisesCompanion(
+        name: Value(name.trim()),
+        iconName: icon == null ? const Value.absent() : Value(icon.name),
+        photoFileName: photoFileName,
+      ),
     );
   }
 
@@ -120,6 +135,7 @@ class ExerciseRepository {
   Exercise _toExercise(ExerciseRow row) => Exercise(
     id: row.id,
     name: row.name,
+    icon: ExerciseIcon.fromName(row.iconName),
     photoFileName: row.photoFileName,
     createdAt: row.createdAt,
   );

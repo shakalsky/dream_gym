@@ -23,7 +23,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -31,6 +31,30 @@ class AppDatabase extends _$AppDatabase {
       // 2 adds the settings row. Nothing is backfilled: every column has a
       // default and the repository treats 'no row' as 'the defaults'.
       if (from < 2) await m.createTable(settingsEntries);
+      // 3 adds reps. Older entries stay null — the count was never recorded.
+      //
+      // Only if missing: drift saves the new version after the upgrade, so
+      // an app stopped in between keeps version 2 with the column already
+      // added — and adding it again fails every launch after.
+      if (from < 3 &&
+          !await _hasColumn(trainingEntries, trainingEntries.reps)) {
+        await m.addColumn(trainingEntries, trainingEntries.reps);
+      }
+      // 4 adds the exercise icon. Older exercises stay null and read as the
+      // default icon. Guarded for the same reason as reps.
+      if (from < 4 && !await _hasColumn(exercises, exercises.iconName)) {
+        await m.addColumn(exercises, exercises.iconName);
+      }
     },
   );
+
+  Future<bool> _hasColumn(
+    TableInfo<Table, dynamic> table,
+    GeneratedColumn<Object> column,
+  ) async {
+    final columns = await customSelect(
+      'PRAGMA table_info(${table.actualTableName})',
+    ).get();
+    return columns.any((row) => row.read<String>('name') == column.name);
+  }
 }

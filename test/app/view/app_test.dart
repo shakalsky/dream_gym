@@ -63,7 +63,8 @@ void main() {
       await tester.pumpWidget(buildApp(testEnv()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Env'));
+      // Idle tabs show only their icon; the label lives in the semantics.
+      await tester.tap(find.bySemanticsLabel('Env'));
       await tester.pumpAndSettle();
 
       expect(find.byType(EnvironmentPage), findsOneWidget);

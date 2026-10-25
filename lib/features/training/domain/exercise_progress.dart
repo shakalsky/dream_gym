@@ -105,6 +105,21 @@ final class TrainingSession extends Equatable {
 
   int get sets => entries.fold(0, (total, entry) => total + entry.sets);
 
+  /// The reps every set of the day had, or null when they differ or were not
+  /// recorded.
+  int? get reps {
+    final reps = entries.first.reps;
+    return entries.every((entry) => entry.reps == reps) ? reps : null;
+  }
+
+  /// Each set of the day, in the order they were logged. Reps are null for
+  /// entries written before reps were recorded.
+  List<({int? reps, double weightKg})> get setsDone => [
+    for (final entry in entries)
+      for (var i = 0; i < entry.sets; i++)
+        (reps: entry.reps, weightKg: entry.weightKg),
+  ];
+
   /// The top weight of the day. Warm-ups are part of the volume but they are
   /// not what the reader is trying to beat.
   double get heaviestWeightKg =>
@@ -122,11 +137,12 @@ enum ProgressMetric {
   /// The heaviest set of each day.
   weight('Weight', 'kg'),
 
-  /// Sets times weight, summed over the day.
+  /// Sets times reps times weight, summed over the day.
   volume('Volume', 'kg'),
 
   /// How many sets were done.
-  sets('Sets', '');
+  sets('Sets', '')
+  ;
 
   const ProgressMetric(this.label, this.unit);
 

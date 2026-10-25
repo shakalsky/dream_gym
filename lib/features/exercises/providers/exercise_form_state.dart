@@ -6,6 +6,7 @@ final class ExerciseFormState extends Equatable {
   const ExerciseFormState({
     required this.name,
     required this.photo,
+    this.icon = ExerciseIcon.fallback,
     this.exerciseId,
     this.status = ExerciseFormStatus.editing,
     this.error,
@@ -15,6 +16,7 @@ final class ExerciseFormState extends Equatable {
   final String? exerciseId;
 
   final String name;
+  final ExerciseIcon icon;
   final PhotoSelection photo;
   final ExerciseFormStatus status;
   final String? error;
@@ -29,6 +31,7 @@ final class ExerciseFormState extends Equatable {
 
   ExerciseFormState copyWith({
     String? name,
+    ExerciseIcon? icon,
     PhotoSelection? photo,
     ExerciseFormStatus? status,
     String? error,
@@ -36,6 +39,7 @@ final class ExerciseFormState extends Equatable {
     return ExerciseFormState(
       exerciseId: exerciseId,
       name: name ?? this.name,
+      icon: icon ?? this.icon,
       photo: photo ?? this.photo,
       status: status ?? this.status,
       error: error,
@@ -43,5 +47,5 @@ final class ExerciseFormState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [exerciseId, name, photo, status, error];
+  List<Object?> get props => [exerciseId, name, icon, photo, status, error];
 }

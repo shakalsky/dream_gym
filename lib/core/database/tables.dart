@@ -19,6 +19,10 @@ class Exercises extends Table {
   /// nothing. See `PhotoStore`.
   TextColumn get photoFileName => text().nullable()();
 
+  /// `ExerciseIcon.name`. Null for exercises from before icons existed, which
+  /// read as the default icon.
+  TextColumn get iconName => text().nullable()();
+
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -47,6 +51,10 @@ class TrainingEntries extends Table {
   DateTimeColumn get performedOn => dateTime()();
 
   IntColumn get sets => integer()();
+
+  /// Repetitions in each of [sets]. Null for entries written before reps
+  /// were recorded.
+  IntColumn get reps => integer().nullable()();
 
   RealColumn get weightKg => real()();
 
@@ -84,9 +92,11 @@ class SettingsEntries extends Table {
   ///
   /// A `TimeOfDay` has no date to attach to, and a `DateTimeColumn` would
   /// invent one that daylight saving then moves.
-  IntColumn get reminderMinutes => integer().withDefault(const Constant(1110))();
+  IntColumn get reminderMinutes =>
+      integer().withDefault(const Constant(1110))();
 
-  BoolColumn get weeklySummary => boolean().withDefault(const Constant(false))();
+  BoolColumn get weeklySummary =>
+      boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

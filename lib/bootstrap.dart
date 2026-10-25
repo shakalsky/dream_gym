@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:ui';
 
+import 'package:dream_gym/core/theme/dream_gym_theme.dart';
 import 'package:dream_gym/env/app_env.dart';
 import 'package:flutter/widgets.dart';
 
@@ -27,6 +28,8 @@ Future<void> bootstrap({
     log('$error', stackTrace: stack);
     return true;
   };
+
+  DreamGymTheme.registerFontLicenses();
 
   // Add cross-flavor configuration here. Provider logging is not: it is
   // installed on the `ProviderScope`, which `buildApp` creates.

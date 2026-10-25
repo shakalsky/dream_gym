@@ -2,6 +2,7 @@ import 'package:dream_gym/core/format/training_format.dart';
 import 'package:dream_gym/core/providers.dart';
 import 'package:dream_gym/features/training/data/training_repository.dart';
 import 'package:dream_gym/features/training/domain/exercise_progress.dart';
+import 'package:dream_gym/features/training/domain/training_entry.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -40,27 +41,108 @@ class LogTrainingNotifier extends Notifier<LogTrainingState> {
   LogTrainingState build() {
     _training = ref.watch(trainingRepositoryProvider);
     final lastSession = _args.lastSession;
+    final day = dayOf(ref.watch(clockProvider)());
+
+    if (lastSession == null) {
+      return LogTrainingState(
+        exerciseId: _args.exerciseId,
+        day: day,
+        sets: 3,
+        repsText: '',
+        weightText: '',
+        setRepsTexts: const ['', '', ''],
+        setWeightTexts: const ['', '', ''],
+      );
+    }
+
+    // The whole of last time, set by set, so 'the same again' is one tap.
+    final done = lastSession.setsDone.take(maxSets).toList();
+    final reps = [for (final set in done) set.reps?.toString() ?? ''];
+    final weights = [for (final set in done) formatKilograms(set.weightKg)];
 
     return LogTrainingState(
       exerciseId: _args.exerciseId,
-      day: dayOf(ref.watch(clockProvider)()),
-      sets: lastSession?.entries.last.sets ?? 3,
-      weightText: lastSession == null
-          ? ''
-          : formatKilograms(lastSession.entries.last.weightKg),
+      day: day,
+      sets: done.length,
+      sameForEverySet: reps.toSet().length == 1 && weights.toSet().length == 1,
+      repsText: reps.first,
+      weightText: weights.first,
+      setRepsTexts: List.unmodifiable(reps),
+      setWeightTexts: List.unmodifiable(weights),
     );
   }
 
   void setsChanged(int sets) {
+    final count = sets.clamp(1, maxSets);
+
+    // A new set starts as a copy of the one before it — the usual next step is
+    // the same again, or a little more.
+    List<String> resized(List<String> current, String fallback) {
+      final filler = current.isEmpty ? fallback : current.last;
+      return List.unmodifiable([
+        for (var i = 0; i < count; i++)
+          i < current.length ? current[i] : filler,
+      ]);
+    }
+
     state = state.copyWith(
-      sets: sets.clamp(1, maxSets),
+      sets: count,
+      setRepsTexts: resized(state.setRepsTexts, state.repsText),
+      setWeightTexts: resized(state.setWeightTexts, state.weightText),
       status: LogTrainingStatus.editing,
     );
+  }
+
+  /// Switches between one reps-and-weight for every set and one per set.
+  void sameForEverySetChanged({required bool same}) {
+    if (same == state.sameForEverySet) return;
+
+    state = same
+        ? state.copyWith(
+            sameForEverySet: true,
+            repsText: state.setRepsTexts.first,
+            weightText: state.setWeightTexts.first,
+            status: LogTrainingStatus.editing,
+          )
+        // Every set starts at the shared values; only the ones that differ
+        // need touching.
+        : state.copyWith(
+            sameForEverySet: false,
+            setRepsTexts: List.unmodifiable(
+              List.filled(state.sets, state.repsText),
+            ),
+            setWeightTexts: List.unmodifiable(
+              List.filled(state.sets, state.weightText),
+            ),
+            status: LogTrainingStatus.editing,
+          );
+  }
+
+  void repsChanged(String value) {
+    state = state.copyWith(repsText: value, status: LogTrainingStatus.editing);
   }
 
   void weightChanged(String value) {
     state = state.copyWith(
       weightText: value,
+      status: LogTrainingStatus.editing,
+    );
+  }
+
+  void setRepsChanged(int index, String value) {
+    state = state.copyWith(
+      setRepsTexts: List.unmodifiable(
+        [...state.setRepsTexts]..[index] = value,
+      ),
+      status: LogTrainingStatus.editing,
+    );
+  }
+
+  void setWeightChanged(int index, String value) {
+    state = state.copyWith(
+      setWeightTexts: List.unmodifiable(
+        [...state.setWeightTexts]..[index] = value,
+      ),
       status: LogTrainingStatus.editing,
     );
   }
@@ -73,8 +155,8 @@ class LogTrainingNotifier extends Notifier<LogTrainingState> {
     // Taken once, up front: the write below carries on even if the sheet is
     // closed mid-save, and a disposed notifier has no state left to read.
     final form = state;
-    final weightKg = form.weightKg;
-    if (weightKg == null || !form.canSave) return;
+    final sets = form.setResults;
+    if (sets == null || !form.canSave) return;
 
     state = form.copyWith(status: LogTrainingStatus.saving);
 
@@ -82,8 +164,7 @@ class LogTrainingNotifier extends Notifier<LogTrainingState> {
       await _training.log(
         exerciseId: form.exerciseId,
         day: form.day,
-        sets: form.sets,
-        weightKg: weightKg,
+        sets: sets,
       );
 
       if (!ref.mounted) return;

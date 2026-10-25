@@ -2,6 +2,7 @@ import 'package:dream_gym/core/providers.dart';
 import 'package:dream_gym/core/storage/photo_store.dart';
 import 'package:dream_gym/features/exercises/data/exercise_repository.dart';
 import 'package:dream_gym/features/exercises/domain/exercise.dart';
+import 'package:dream_gym/features/exercises/domain/exercise_icon.dart';
 import 'package:dream_gym/features/exercises/domain/photo_selection.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:equatable/equatable.dart';
@@ -12,11 +13,7 @@ part 'exercise_form_state.dart';
 
 /// Keyed by the exercise being edited, or null while adding one. Disposed with
 /// the form, so the next one opens fresh.
-final NotifierProviderFamily<
-  ExerciseFormNotifier,
-  ExerciseFormState,
-  Exercise?
->
+final NotifierProviderFamily<ExerciseFormNotifier, ExerciseFormState, Exercise?>
 exerciseFormProvider = NotifierProvider.autoDispose.family(
   ExerciseFormNotifier.new,
 );
@@ -48,6 +45,7 @@ class ExerciseFormNotifier extends Notifier<ExerciseFormState> {
     return ExerciseFormState(
       exerciseId: exercise?.id,
       name: exercise?.name ?? '',
+      icon: exercise?.icon ?? ExerciseIcon.fallback,
       photo: photoFileName == null
           ? const NoPhoto()
           : StoredPhoto(photoFileName),
@@ -56,6 +54,10 @@ class ExerciseFormNotifier extends Notifier<ExerciseFormState> {
 
   void nameChanged(String value) {
     state = state.copyWith(name: value, status: ExerciseFormStatus.editing);
+  }
+
+  void iconChanged(ExerciseIcon value) {
+    state = state.copyWith(icon: value, status: ExerciseFormStatus.editing);
   }
 
   /// Asks for a photo. Backing out of the picker leaves the form as it was.
@@ -104,12 +106,14 @@ class ExerciseFormNotifier extends Notifier<ExerciseFormState> {
       if (exerciseId == null) {
         await _exercises.create(
           name: form.name,
+          icon: form.icon,
           photoFileName: storedFileName,
         );
       } else {
         await _exercises.update(
           exerciseId,
           name: form.name,
+          icon: form.icon,
           photoFileName: switch (form.photo) {
             PickedPhoto() => Value(storedFileName),
             NoPhoto() => const Value(null),

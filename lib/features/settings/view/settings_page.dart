@@ -39,7 +39,6 @@ class SettingsPage extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: const AppAppBar(title: 'Settings', centerTitle: false),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSizes.defaultPadding,
@@ -311,7 +310,9 @@ class _RemindersSection extends ConsumerWidget {
               color: colors.surface1,
               borderRadius: BorderRadius.circular(AppSizes.mediumButtonRadius),
               child: InkWell(
-                borderRadius: BorderRadius.circular(AppSizes.mediumButtonRadius),
+                borderRadius: BorderRadius.circular(
+                  AppSizes.mediumButtonRadius,
+                ),
                 onTap: () => _pickTime(context, notifier),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
